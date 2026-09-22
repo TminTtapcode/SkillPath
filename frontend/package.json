@@ -1,0 +1,45 @@
+{
+  "name": "skillpath-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest",
+    "api:generate": "openapi-typescript ../docs/api/openapi-v1.yaml -o src/shared/api/schema.d.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "5.2.2",
+    "@tanstack/react-query": "5.103.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "7.88.0",
+    "react-router": "8.4.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.10.13",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "eslint": "10.11.0",
+    "globals": "16.4.0",
+    "jsdom": "30.1.1",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  }
+}

@@ -1,0 +1,248 @@
+openapi: 3.1.0
+info:
+  title: SkillPath API
+  version: v1
+  description: Phase 1 authentication, profile, and goal contracts.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/auth/csrf:
+    get:
+      operationId: getCsrf
+      responses:
+        '200':
+          description: CSRF token metadata for the browser client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfResponse'
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created and session authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Session authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Session invalidated.
+  /api/v1/me:
+    get:
+      operationId: getMe
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Current learner profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/goal-templates:
+    get:
+      operationId: listGoalTemplates
+      responses:
+        '200':
+          description: Active goal templates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoalTemplateResponse'
+  /api/v1/goals:
+    post:
+      operationId: createGoal
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '201':
+          description: Goal created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '200':
+          description: Original result replayed for the same idempotency key and request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /api/v1/goals/active:
+    get:
+      operationId: getActiveGoal
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Current active goal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: SKILLPATH_SESSION
+  parameters:
+    CsrfHeader:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      schema:
+        type: string
+  responses:
+    Problem:
+      description: Request failed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+  schemas:
+    CsrfResponse:
+      type: object
+      required: [headerName, parameterName, token]
+      properties:
+        headerName: { type: string }
+        parameterName: { type: string }
+        token: { type: string }
+    RegisterRequest:
+      type: object
+      required: [email, password, displayName, timezone]
+      properties:
+        email: { type: string, format: email, maxLength: 320 }
+        password: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
+        displayName: { type: string, minLength: 1, maxLength: 100 }
+        timezone: { type: string, minLength: 1, maxLength: 64 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 320 }
+        password: { type: string, maxLength: 128, writeOnly: true }
+    ProfileResponse:
+      type: object
+      required: [id, email, displayName, timezone, version]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        timezone: { type: string }
+        version: { type: integer, format: int64 }
+    GoalTemplateResponse:
+      type: object
+      required: [id, key, displayName, description]
+      properties:
+        id: { type: string }
+        key: { type: string }
+        displayName: { type: string }
+        description: { type: string }
+    CreateGoalRequest:
+      type: object
+      required: [goalTemplateId, targetDate, timezone, defaultDailyMinutes]
+      properties:
+        goalTemplateId: { type: string }
+        targetDate: { type: string, format: date }
+        timezone: { type: string, maxLength: 64 }
+        defaultDailyMinutes: { type: integer, minimum: 30, maximum: 180 }
+    GoalResponse:
+      type: object
+      required: [id, goalTemplateId, targetDate, timezone, defaultDailyMinutes, status, version]
+      properties:
+        id: { type: string }
+        goalTemplateId: { type: string }
+        targetDate: { type: string, format: date }
+        timezone: { type: string }
+        defaultDailyMinutes: { type: integer }
+        status: { type: string, enum: [ACTIVE, COMPLETED, CANCELLED] }
+        version: { type: integer, format: int64 }
+    FieldError:
+      type: object
+      required: [field, code]
+      properties:
+        field: { type: string }
+        code: { type: string }
+    ApiProblem:
+      type: object
+      required: [type, title, status, code, detail, instance, correlationId, fieldErrors]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string }
+        correlationId: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'

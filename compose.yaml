@@ -1,0 +1,64 @@
+name: skillpath
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-skillpath}
+      MYSQL_USER: ${MYSQL_USER:-skillpath_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-local-skillpath-only}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-only}
+      TZ: UTC
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  backend:
+    profiles: ["app"]
+    build:
+      context: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-skillpath}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-skillpath_app}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-local-skillpath-only}
+      SKILLPATH_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      SKILLPATH_SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  mysql-data:
