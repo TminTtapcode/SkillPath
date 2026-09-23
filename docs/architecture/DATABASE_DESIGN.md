@@ -26,7 +26,10 @@
 
 Phase 1 physically implements `users`, `user_credentials`, `user_roles`,
 `SPRING_SESSION`, `SPRING_SESSION_ATTRIBUTES`, `goal_templates`, `user_goals`, and
-`idempotency_records`. Later table groups remain logical design only.
+`idempotency_records`. Phase 2 physically implements `knowledge_graph_versions`,
+`knowledge_nodes`, `knowledge_relations`, `goal_knowledge`, and the append-only
+`knowledge_version_events` lifecycle audit. Later table groups remain logical design
+only.
 
 Flyway history at the Phase 1 boundary:
 
@@ -37,6 +40,8 @@ Flyway history at the Phase 1 boundary:
 | V3 | Seed `JAVA_BACKEND_INTERN` as data |
 | V4 | Forward correction aligning `default_daily_minutes` with the Java integer mapping |
 | V5 | Rename draft `auth_*` tables to authoritative `user_credentials`/`user_roles` names |
+| V6 | Versioned knowledge graph, goal mapping, publication uniqueness, and lifecycle audit |
+| V7 | Canonical project-authored Java Backend v1 graph and goal mapping |
 
 V4 and V5 intentionally demonstrate the forward-fix rule: an applied migration was
 not rewritten after integration validation exposed a mismatch/context conflict.
@@ -80,6 +85,12 @@ erDiagram
 - Internal MVP IDs are `BIGINT`; API contracts treat them as opaque and clients must not infer ordering or numeric semantics.
 
 Cycle validation for prerequisite graph belongs in the domain publish transaction; SQL constraints alone are insufficient.
+
+Phase 2 uses a generated nullable `published_curriculum_key` unique constraint to
+enforce one published version per curriculum. Relation endpoint composite foreign keys
+enforce same-version edges. Runtime publication locks all versions of the curriculum,
+flushes retirement before publication to satisfy the generated unique key, and keeps
+retirement, publication, and audit in one transaction.
 
 ## Index principles
 

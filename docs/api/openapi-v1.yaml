@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: SkillPath API
   version: v1
-  description: Phase 1 authentication, profile, and goal contracts.
+  description: Phase 1 identity/goal and Phase 2 published knowledge-graph contracts.
 servers:
   - url: http://localhost:8080
 paths:
@@ -94,6 +94,124 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GoalTemplateResponse'
+  /api/v1/goal-templates/{goalTemplateId}/graph:
+    get:
+      operationId: getPublishedGoalGraph
+      parameters:
+        - $ref: '#/components/parameters/GoalTemplateId'
+        - name: anchorNodeId
+          in: query
+          schema: { type: string }
+        - name: depth
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 10, default: 2 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Current published graph for the active goal template.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalGraphResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/knowledge/nodes/{nodeId}:
+    get:
+      operationId: getPublishedKnowledgeNode
+      parameters:
+        - $ref: '#/components/parameters/NodeId'
+      responses:
+        '200':
+          description: A node in a published graph.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeNodeResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/knowledge/nodes/{nodeId}/prerequisites:
+    get:
+      operationId: getPublishedPrerequisites
+      parameters:
+        - $ref: '#/components/parameters/NodeId'
+        - $ref: '#/components/parameters/Transitive'
+        - $ref: '#/components/parameters/GraphLimit'
+      responses:
+        '200':
+          description: Stable direct or transitive prerequisite nodes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KnowledgeNodeResponse'
+  /api/v1/knowledge/nodes/{nodeId}/dependents:
+    get:
+      operationId: getPublishedDependents
+      parameters:
+        - $ref: '#/components/parameters/NodeId'
+        - $ref: '#/components/parameters/Transitive'
+        - $ref: '#/components/parameters/GraphLimit'
+      responses:
+        '200':
+          description: Stable direct or transitive dependent nodes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KnowledgeNodeResponse'
+  /api/v1/admin/knowledge/versions/{versionId}/validate:
+    post:
+      operationId: validateKnowledgeGraphVersion
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/VersionId'
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Deterministic validation result; invalid drafts remain drafts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphValidationResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/admin/knowledge/versions/{versionId}/publish:
+    post:
+      operationId: publishKnowledgeGraphVersion
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/VersionId'
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Version published atomically, or replay of the current publication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphPublicationResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
   /api/v1/goals:
     post:
       operationId: createGoal
@@ -160,6 +278,29 @@ components:
       required: true
       schema:
         type: string
+    GoalTemplateId:
+      name: goalTemplateId
+      in: path
+      required: true
+      schema: { type: string }
+    NodeId:
+      name: nodeId
+      in: path
+      required: true
+      schema: { type: string }
+    VersionId:
+      name: versionId
+      in: path
+      required: true
+      schema: { type: string }
+    Transitive:
+      name: transitive
+      in: query
+      schema: { type: boolean, default: false }
+    GraphLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
   responses:
     Problem:
       description: Request failed.
@@ -225,6 +366,91 @@ components:
         defaultDailyMinutes: { type: integer }
         status: { type: string, enum: [ACTIVE, COMPLETED, CANCELLED] }
         version: { type: integer, format: int64 }
+    KnowledgeNodeResponse:
+      type: object
+      required: [id, graphVersionId, slug, name, description, category, difficulty, estimatedMinutes, status]
+      properties:
+        id: { type: string }
+        graphVersionId: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        difficulty: { type: integer, minimum: 1, maximum: 5 }
+        estimatedMinutes: { type: integer, minimum: 1 }
+        status: { type: string, enum: [DRAFT, ACTIVE, DEPRECATED, ARCHIVED] }
+    GoalGraphNode:
+      type: object
+      required: [id, slug, name, description, category, difficulty, estimatedMinutes, status, relevanceWeight, requiredMastery, terminal]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        difficulty: { type: integer }
+        estimatedMinutes: { type: integer }
+        status: { type: string }
+        relevanceWeight: { type: number, minimum: 0, maximum: 1 }
+        requiredMastery: { type: number, minimum: 0, maximum: 1 }
+        terminal: { type: boolean }
+    KnowledgeEdge:
+      type: object
+      required: [id, sourceNodeId, targetNodeId, type, strength, status, rationale]
+      properties:
+        id: { type: string }
+        sourceNodeId: { type: string }
+        targetNodeId: { type: string }
+        type: { type: string, enum: [PREREQUISITE, PART_OF, RELATED, APPLIED_IN] }
+        strength: { type: number, minimum: 0, maximum: 1 }
+        status: { type: string, enum: [ACTIVE, DEPRECATED] }
+        rationale: { type: string }
+    GoalGraphResponse:
+      type: object
+      required: [graphVersionId, curriculumKey, versionLabel, publishedAt, nodes, edges, truncated]
+      properties:
+        graphVersionId: { type: string }
+        curriculumKey: { type: string }
+        versionLabel: { type: string }
+        publishedAt: { type: string, format: date-time }
+        nodes:
+          type: array
+          items: { $ref: '#/components/schemas/GoalGraphNode' }
+        edges:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeEdge' }
+        truncated: { type: boolean }
+        nextCursor: { type: [string, 'null'] }
+    GraphViolation:
+      type: object
+      required: [code, detail, nodePath]
+      properties:
+        code: { type: string }
+        detail: { type: string }
+        nodePath:
+          type: array
+          items: { type: string }
+    GraphValidationResponse:
+      type: object
+      required: [graphVersionId, status, valid, transitioned, violations]
+      properties:
+        graphVersionId: { type: string }
+        status: { type: string, enum: [DRAFT, VALIDATED] }
+        valid: { type: boolean }
+        transitioned: { type: boolean }
+        violations:
+          type: array
+          items: { $ref: '#/components/schemas/GraphViolation' }
+    GraphPublicationResponse:
+      type: object
+      required: [graphVersionId, curriculumKey, versionLabel, status, publishedAt, replayed]
+      properties:
+        graphVersionId: { type: string }
+        curriculumKey: { type: string }
+        versionLabel: { type: string }
+        status: { type: string, enum: [PUBLISHED] }
+        publishedAt: { type: string, format: date-time }
+        replayed: { type: boolean }
     FieldError:
       type: object
       required: [field, code]

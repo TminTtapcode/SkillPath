@@ -17,6 +17,11 @@ Phase 1 is executable: a learner can register, sign in, choose the seeded Java
 Backend Intern template, create one active goal, reload it, and sign out. Assessment
 and adaptive planning remain intentionally scheduled for later phases.
 
+Phase 2 adds the published, versioned Java Backend knowledge graph. Clients can query
+goal graphs, nodes, prerequisites, and dependents; curator/admin sessions can validate
+and atomically publish successor graph versions. The visual learner roadmap remains a
+later phase.
+
 ## Quick start
 
 Prerequisites: Java 21, Node 24, npm 11, Docker with Compose, and PowerShell for the

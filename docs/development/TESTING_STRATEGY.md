@@ -85,3 +85,14 @@ Use named scenarios with fixed clock, graph version, policy version, state, and 
 
 Phase 1 does not claim coverage of the later graph, assessment, planner, or roadmap
 tests listed above.
+
+## Phase 2 executable gates
+
+- Pure domain fixtures cover deterministic cycle paths, stable topology/traversal,
+  relation-type boundaries, and derived prerequisite frontiers.
+- `PhaseTwoFlowIT` applies V1–V7 to clean MySQL 8.4 and verifies the canonical graph,
+  bounded public queries, learner rejection, curator replay, successor validation,
+  atomic publish/audit, and concurrent one-winner publication.
+- Architecture tests keep knowledge persistence private and domain code framework-free.
+- Checked-in OpenAPI is regenerated into TypeScript and frontend lint/test/build remain
+  regression gates even though Phase 2 adds no learner UI.

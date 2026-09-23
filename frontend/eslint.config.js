@@ -3,7 +3,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'src/shared/api/schema.d.ts'] },
+  { ignores: ['dist', 'coverage', 'src/shared/api/schema.d.ts', '.agents'] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {

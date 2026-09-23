@@ -18,6 +18,7 @@ export function LoginPage() {
   const queryClient = useQueryClient()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onBlur',
     defaultValues: { email: '', password: '' },
   })
   const mutation = useMutation({
@@ -32,41 +33,60 @@ export function LoginPage() {
     <section className="panel auth-panel">
       <p className="eyebrow">Welcome back</p>
       <h1>Sign in</h1>
+      <p className="lede">Continue your personalized learning route.</p>
       {mutation.error && <ErrorNotice error={mutation.error} />}
       <form
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
         noValidate
       >
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...form.register('email')}
-        />
-        {form.formState.errors.email && (
-          <p className="field-error">{form.formState.errors.email.message}</p>
-        )}
+        <div className="form-group">
+          <label htmlFor="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            aria-invalid={Boolean(form.formState.errors.email)}
+            aria-describedby={
+              form.formState.errors.email ? 'email-error' : undefined
+            }
+            {...form.register('email')}
+          />
+          {form.formState.errors.email && (
+            <p id="email-error" className="field-error" role="alert">
+              {form.formState.errors.email.message}
+            </p>
+          )}
+        </div>
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          {...form.register('password')}
-        />
-        {form.formState.errors.password && (
-          <p className="field-error">
-            {form.formState.errors.password.message}
-          </p>
-        )}
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            aria-invalid={Boolean(form.formState.errors.password)}
+            aria-describedby={
+              form.formState.errors.password ? 'password-error' : undefined
+            }
+            {...form.register('password')}
+          />
+          {form.formState.errors.password && (
+            <p id="password-error" className="field-error" role="alert">
+              {form.formState.errors.password.message}
+            </p>
+          )}
+        </div>
 
-        <button type="submit" disabled={mutation.isPending}>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className={mutation.isPending ? 'pending' : ''}
+        >
           {mutation.isPending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <p>
-        New here? <Link to="/register">Create an account</Link>
+      <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>
+        New to SkillPath? <Link to="/register">Create an account</Link>
       </p>
     </section>
   )

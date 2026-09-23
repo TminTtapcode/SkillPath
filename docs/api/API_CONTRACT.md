@@ -30,8 +30,8 @@ Use consistent codes. Do not leak stack traces, SQL, secrets, answer keys, or ex
 
 ## MVP endpoints
 
-Only the following Phase 1 operations are currently implemented and published in
-`openapi-v1.yaml`:
+The following Phase 1 and Phase 2 operations are currently implemented and published
+in `openapi-v1.yaml`:
 
 ```http
 GET  /api/v1/auth/csrf
@@ -42,6 +42,12 @@ GET  /api/v1/me
 GET  /api/v1/goal-templates
 POST /api/v1/goals
 GET  /api/v1/goals/active
+GET  /api/v1/goal-templates/{goalTemplateId}/graph
+GET  /api/v1/knowledge/nodes/{nodeId}
+GET  /api/v1/knowledge/nodes/{nodeId}/prerequisites
+GET  /api/v1/knowledge/nodes/{nodeId}/dependents
+POST /api/v1/admin/knowledge/versions/{versionId}/validate
+POST /api/v1/admin/knowledge/versions/{versionId}/publish
 ```
 
 Registration creates the profile and an authenticated session. `POST /goals`
@@ -49,6 +55,12 @@ requires `Idempotency-Key`: same key plus the same normalized input replays the
 original result; different input returns `IDEMPOTENCY_KEY_REUSED`; an existing active
 goal returns `ACTIVE_GOAL_ALREADY_EXISTS`. All other endpoint lists below are target MVP
 contracts, not claims of implementation.
+
+Phase 2 knowledge reads expose only the current published curriculum and contain no
+learner state, so they are public like goal-template discovery. Goal-graph queries are
+bounded by `depth <= 10` and `limit <= 200`; cursors are opaque and version-bound.
+Validation/publication requires `CURATOR` or `ADMIN`, an authenticated session, and
+CSRF. Publication is atomic and retrying the already-published version is idempotent.
 
 ### Session/profile
 
@@ -109,7 +121,9 @@ accept mastery, prerequisite-waiver, or goal-completion mutations.
 
 ### Admin/curator
 
-Protected endpoints manage graph versions, content, and validation. Publish operations require elevated role and audit entry.
+Phase 2 implements protected graph validate/publish endpoints. Successful lifecycle
+transitions create durable audit entries. General graph CRUD/import and role
+provisioning are not public APIs.
 
 ## Status semantics
 

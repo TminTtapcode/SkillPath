@@ -14,10 +14,31 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <header className="site-header">
-          <Link className="brand" to="/">
-            SkillPath
-          </Link>
-          <span>One clear next step.</span>
+          <div className="site-header-inner">
+            <div className="brand-group">
+              <Link className="brand" to="/">
+                <svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--sp-primary)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                </svg>
+                <span>SkillPath</span>
+              </Link>
+              <span className="brand-badge">Adaptive Planner</span>
+            </div>
+            <div className="header-status">
+              <span>One clear next step</span>
+            </div>
+          </div>
         </header>
         <main className="app-shell">
           <Routes>

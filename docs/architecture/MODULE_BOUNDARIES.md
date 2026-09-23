@@ -46,6 +46,10 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
 - A module may query another only through its published interface.
 - A module owns validation of its invariants and tables.
 - Goal-template mappings in `knowledge` reference module-neutral goal-template IDs; `knowledge` does not import goal persistence entities.
+- The goal-owned HTTP adapter for `/goal-templates/{id}/graph` delegates to the public
+  `knowledge.application.KnowledgeGraphQueries` contract. This realizes `goal ->
+  knowledge` without a reverse runtime dependency; the knowledge-owned mapping uses a
+  database FK only for goal-template existence.
 - `review` alone advances review intervals. `progress` may expose `nextReviewAt` only as a derived snapshot received through the review contract.
 - Cross-module database joins are avoided in domain writes; dedicated read models may join through controlled query adapters.
 - Events are past tense facts, versioned, and idempotently consumed.

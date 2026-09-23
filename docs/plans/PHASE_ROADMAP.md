@@ -29,6 +29,9 @@ Exit: new developer can start MySQL, run apps/tests, and complete goal slice.
 
 ## Phase 2 — Knowledge system
 
+Status: completed locally on 2026-09-23; implementation and validation evidence are in
+`PHASE_2_KNOWLEDGE_SYSTEM.md`.
+
 - Graph/version entities and migrations.
 - Relation validator, traversal, goal subgraph.
 - Curated Java Backend seed/import.

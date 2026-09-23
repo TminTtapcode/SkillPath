@@ -10,7 +10,7 @@ const schema = z.object({
   email: z.email('Enter a valid email address.'),
   password: z.string().min(12, 'Use at least 12 characters.').max(128),
   displayName: z.string().trim().min(1, 'Enter your name.').max(100),
-  timezone: z.string().min(1),
+  timezone: z.string().min(1, 'Timezone is required.'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -20,6 +20,7 @@ export function RegisterPage() {
   const queryClient = useQueryClient()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onBlur',
     defaultValues: {
       email: '',
       password: '',
@@ -38,58 +39,102 @@ export function RegisterPage() {
   return (
     <section className="panel auth-panel">
       <p className="eyebrow">Start your route</p>
-      <h1>Create your SkillPath account</h1>
+      <h1>Create account</h1>
       <p className="lede">Tell us who you are. Your first goal comes next.</p>
       {mutation.error && <ErrorNotice error={mutation.error} />}
       <form
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
         noValidate
       >
-        <label htmlFor="displayName">Display name</label>
-        <input
-          id="displayName"
-          autoComplete="name"
-          {...form.register('displayName')}
-        />
-        <FieldError message={form.formState.errors.displayName?.message} />
+        <div className="form-group">
+          <label htmlFor="displayName">Display name</label>
+          <input
+            id="displayName"
+            autoComplete="name"
+            aria-invalid={Boolean(form.formState.errors.displayName)}
+            aria-describedby={
+              form.formState.errors.displayName ? 'displayName-error' : undefined
+            }
+            {...form.register('displayName')}
+          />
+          <FieldError
+            id="displayName-error"
+            message={form.formState.errors.displayName?.message}
+          />
+        </div>
 
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...form.register('email')}
-        />
-        <FieldError message={form.formState.errors.email?.message} />
+        <div className="form-group">
+          <label htmlFor="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            aria-invalid={Boolean(form.formState.errors.email)}
+            aria-describedby={
+              form.formState.errors.email ? 'email-error' : undefined
+            }
+            {...form.register('email')}
+          />
+          <FieldError
+            id="email-error"
+            message={form.formState.errors.email?.message}
+          />
+        </div>
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          {...form.register('password')}
-        />
-        <FieldError message={form.formState.errors.password?.message} />
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            aria-invalid={Boolean(form.formState.errors.password)}
+            aria-describedby={
+              form.formState.errors.password ? 'password-error' : undefined
+            }
+            {...form.register('password')}
+          />
+          <FieldError
+            id="password-error"
+            message={form.formState.errors.password?.message}
+          />
+        </div>
 
-        <label htmlFor="timezone">Timezone</label>
-        <input
-          id="timezone"
-          autoComplete="off"
-          {...form.register('timezone')}
-        />
-        <FieldError message={form.formState.errors.timezone?.message} />
+        <div className="form-group">
+          <label htmlFor="timezone">Timezone</label>
+          <input
+            id="timezone"
+            autoComplete="off"
+            aria-invalid={Boolean(form.formState.errors.timezone)}
+            aria-describedby={
+              form.formState.errors.timezone ? 'timezone-error' : undefined
+            }
+            {...form.register('timezone')}
+          />
+          <FieldError
+            id="timezone-error"
+            message={form.formState.errors.timezone?.message}
+          />
+        </div>
 
-        <button type="submit" disabled={mutation.isPending}>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className={mutation.isPending ? 'pending' : ''}
+        >
           {mutation.isPending ? 'Creating account…' : 'Create account'}
         </button>
       </form>
-      <p>
+      <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>
         Already registered? <Link to="/login">Sign in</Link>
       </p>
     </section>
   )
 }
 
-function FieldError({ message }: { message?: string }) {
-  return message ? <p className="field-error">{message}</p> : null
+function FieldError({ id, message }: { id: string; message?: string }) {
+  return message ? (
+    <p id={id} className="field-error" role="alert">
+      {message}
+    </p>
+  ) : null
 }

@@ -31,4 +31,15 @@ class ArchitectureTest {
                 .resideInAnyPackage("org.springframework..", "jakarta.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void knowledgePersistenceRemainsPrivate() {
+        noClasses()
+                .that()
+                .resideOutsideOfPackage("..knowledge.infrastructure.persistence..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("..knowledge.infrastructure.persistence..")
+                .check(classes);
+    }
 }

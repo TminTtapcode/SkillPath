@@ -100,6 +100,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goal-templates/{goalTemplateId}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPublishedGoalGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/nodes/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPublishedKnowledgeNode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/nodes/{nodeId}/prerequisites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPublishedPrerequisites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/nodes/{nodeId}/dependents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPublishedDependents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/knowledge/versions/{versionId}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validateKnowledgeGraphVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/knowledge/versions/{versionId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publishKnowledgeGraphVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goals": {
         parameters: {
             query?: never;
@@ -187,6 +283,76 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        KnowledgeNodeResponse: {
+            id: string;
+            graphVersionId: string;
+            slug: string;
+            name: string;
+            description: string;
+            category: string;
+            difficulty: number;
+            estimatedMinutes: number;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "DEPRECATED" | "ARCHIVED";
+        };
+        GoalGraphNode: {
+            id: string;
+            slug: string;
+            name: string;
+            description: string;
+            category: string;
+            difficulty: number;
+            estimatedMinutes: number;
+            status: string;
+            relevanceWeight: number;
+            requiredMastery: number;
+            terminal: boolean;
+        };
+        KnowledgeEdge: {
+            id: string;
+            sourceNodeId: string;
+            targetNodeId: string;
+            /** @enum {string} */
+            type: "PREREQUISITE" | "PART_OF" | "RELATED" | "APPLIED_IN";
+            strength: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "DEPRECATED";
+            rationale: string;
+        };
+        GoalGraphResponse: {
+            graphVersionId: string;
+            curriculumKey: string;
+            versionLabel: string;
+            /** Format: date-time */
+            publishedAt: string;
+            nodes: components["schemas"]["GoalGraphNode"][];
+            edges: components["schemas"]["KnowledgeEdge"][];
+            truncated: boolean;
+            nextCursor?: string | null;
+        };
+        GraphViolation: {
+            code: string;
+            detail: string;
+            nodePath: string[];
+        };
+        GraphValidationResponse: {
+            graphVersionId: string;
+            /** @enum {string} */
+            status: "DRAFT" | "VALIDATED";
+            valid: boolean;
+            transitioned: boolean;
+            violations: components["schemas"]["GraphViolation"][];
+        };
+        GraphPublicationResponse: {
+            graphVersionId: string;
+            curriculumKey: string;
+            versionLabel: string;
+            /** @enum {string} */
+            status: "PUBLISHED";
+            /** Format: date-time */
+            publishedAt: string;
+            replayed: boolean;
+        };
         FieldError: {
             field: string;
             code: string;
@@ -216,6 +382,11 @@ export interface components {
     };
     parameters: {
         CsrfHeader: string;
+        GoalTemplateId: string;
+        NodeId: string;
+        VersionId: string;
+        Transitive: boolean;
+        GraphLimit: number;
     };
     requestBodies: never;
     headers: never;
@@ -357,6 +528,163 @@ export interface operations {
                     "application/json": components["schemas"]["GoalTemplateResponse"][];
                 };
             };
+        };
+    };
+    getPublishedGoalGraph: {
+        parameters: {
+            query?: {
+                anchorNodeId?: string;
+                depth?: number;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                goalTemplateId: components["parameters"]["GoalTemplateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current published graph for the active goal template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalGraphResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getPublishedKnowledgeNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A node in a published graph. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeNodeResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    getPublishedPrerequisites: {
+        parameters: {
+            query?: {
+                transitive?: components["parameters"]["Transitive"];
+                limit?: components["parameters"]["GraphLimit"];
+            };
+            header?: never;
+            path: {
+                nodeId: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stable direct or transitive prerequisite nodes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeNodeResponse"][];
+                };
+            };
+        };
+    };
+    getPublishedDependents: {
+        parameters: {
+            query?: {
+                transitive?: components["parameters"]["Transitive"];
+                limit?: components["parameters"]["GraphLimit"];
+            };
+            header?: never;
+            path: {
+                nodeId: components["parameters"]["NodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stable direct or transitive dependent nodes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeNodeResponse"][];
+                };
+            };
+        };
+    };
+    validateKnowledgeGraphVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deterministic validation result; invalid drafts remain drafts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphValidationResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    publishKnowledgeGraphVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version published atomically, or replay of the current publication. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphPublicationResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     createGoal: {

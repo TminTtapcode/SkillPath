@@ -125,6 +125,13 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/goal-templates")
                         .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/goal-templates/*/graph",
+                                "/api/v1/knowledge/nodes/**")
+                        .permitAll()
+                        .requestMatchers("/api/v1/admin/knowledge/**")
+                        .hasAnyRole("CURATOR", "ADMIN")
                         .anyRequest()
                         .authenticated())
                 .exceptionHandling(exceptions -> exceptions

@@ -4,6 +4,9 @@ import com.skillpath.auth.infrastructure.security.AuthenticatedUser;
 import com.skillpath.goal.application.GoalService;
 import com.skillpath.goal.domain.GoalTemplate;
 import com.skillpath.goal.domain.UserGoal;
+import com.skillpath.knowledge.application.KnowledgeGraphQueries;
+import com.skillpath.knowledge.application.KnowledgeGraphService;
+import com.skillpath.shared.api.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,9 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class GoalController {
 
     private final GoalService goalService;
+    private final KnowledgeGraphQueries knowledgeGraphQueries;
 
-    public GoalController(GoalService goalService) {
+    public GoalController(GoalService goalService, KnowledgeGraphQueries knowledgeGraphQueries) {
         this.goalService = goalService;
+        this.knowledgeGraphQueries = knowledgeGraphQueries;
     }
 
     @GetMapping("/goal-templates")
@@ -57,6 +63,30 @@ public class GoalController {
     @GetMapping("/goals/active")
     GoalResponse active(@AuthenticationPrincipal AuthenticatedUser principal) {
         return GoalResponse.from(goalService.activeGoal(principal.userId()));
+    }
+
+    @GetMapping("/goal-templates/{goalTemplateId}/graph")
+    KnowledgeGraphService.GoalGraphView graph(
+            @org.springframework.web.bind.annotation.PathVariable String goalTemplateId,
+            @RequestParam(required = false) String anchorNodeId,
+            @RequestParam(defaultValue = "2") int depth,
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(required = false) String cursor) {
+        long templateId = parseOpaqueId(goalTemplateId, "INVALID_GOAL_TEMPLATE_ID");
+        Long anchor = anchorNodeId == null ? null : parseOpaqueId(anchorNodeId, "INVALID_GRAPH_ANCHOR");
+        return knowledgeGraphQueries.goalGraph(templateId, anchor, depth, limit, cursor);
+    }
+
+    private long parseOpaqueId(String value, String code) {
+        try {
+            long id = Long.parseLong(value);
+            if (id <= 0) {
+                throw new NumberFormatException();
+            }
+            return id;
+        } catch (NumberFormatException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, code, "ID is invalid.");
+        }
     }
 
     public record CreateGoalRequest(

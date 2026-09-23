@@ -165,3 +165,22 @@ của progress/review/planner và không thuộc quyền ghi của module knowle
 - Cùng graph version cho cùng topological order ổn định.
 - Roadmap cá nhân chỉ hiển thị graph version đã publish và không ghi ngược trạng thái vào knowledge graph.
 - Graph lớn có thể query theo bounded neighborhood/progressive expansion mà vẫn giữ stable node/edge IDs và version.
+
+## 9. Implemented Phase 2 contract
+
+- Flyway V6 owns graph/version/node/relation/goal-mapping and lifecycle-audit schema;
+  V7 publishes the project-authored `JAVA_BACKEND` graph version `1.0.0`.
+- The initial graph contains 17 nodes and 23 relations mapped to
+  `JAVA_BACKEND_INTERN`. Terminal outcomes are authentication/authorization,
+  integration testing, and Docker/deployment basics.
+- Stable topological ordering uses node slug then opaque node ID as the tie-breaker.
+- Traversal and validation are iterative/bounded and implemented without a third-party
+  graph library. Only active `PREREQUISITE` relations participate in topology/gating.
+- Goal-graph reads support optional anchor, depth `0–10`, limit `1–200`, and an opaque
+  graph-version-bound cursor. Draft/validated/retired versions are not exposed through
+  public reads.
+- `innerFringe`, `outerFringe`, and `blocked` are tested pure derivations whose mastery
+  threshold and task availability are supplied by callers; they are not persisted.
+- Runtime validate/publish commands require `CURATOR` or `ADMIN`. Publication locks the
+  curriculum versions and atomically retires the old version, publishes the successor,
+  and records lifecycle audit events.

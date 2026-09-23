@@ -11,9 +11,11 @@
 
 ## Current phase
 
-**Phase 1 — Engineering foundation and thin goal slice completed locally.** The
-repository now contains runnable backend/frontend applications, MySQL migrations,
-tests, CI, and app containers. Phase 2 (Knowledge Graph) has not started.
+**Phase 2 — Knowledge System completed locally.** The repository now contains the
+versioned Java Backend graph schema and seed, deterministic validation/traversal,
+published read APIs, and secure atomic curator publication. Phase 3 (Assessment) has
+not started. Validation evidence is recorded in
+`docs/plans/PHASE_2_KNOWLEDGE_SYSTEM.md`.
 
 ## Confirmed decisions
 
@@ -48,14 +50,16 @@ tests, CI, and app containers. Phase 2 (Knowledge Graph) has not started.
 
 - Product vision and MVP scope: defined.
 - System architecture/module boundaries: defined for MVP.
-- MySQL logical data model and migration rules: defined; Phase 1 identity, Spring
-  Session, goal, idempotency, and template-seed migrations are implemented.
+- MySQL logical data model and migration rules: defined; Phase 1 identity/session/goal
+  and Phase 2 knowledge graph V6/V7 migrations are implemented and tested from clean
+  and V5 upgrade paths.
 - Core domain specifications: defined at v1 design level.
 - Learning task and adaptive loop: defined at v1 design level.
 - Learner-facing visual goal-map/read-model direction: defined for MVP with accessibility and progressive-disclosure constraints.
 - Open-source adoption register, license/provenance workflow, visual-map spike, and post-MVP algorithm evaluation path: defined.
-- API contract: Phase 1 endpoints are published in `docs/api/openapi-v1.yaml`; frontend
-  TypeScript types are generated and checked for drift.
+- API contract: Phase 1 identity/goal and Phase 2 published graph/admin lifecycle
+  endpoints are published in `docs/api/openapi-v1.yaml`; frontend TypeScript types are
+  generated and checked for drift.
 - AI boundary: defined.
 - Development, testing, and Docker strategies: defined.
 
@@ -63,7 +67,8 @@ tests, CI, and app containers. Phase 2 (Knowledge Graph) has not started.
 
 - Final public brand/domain and trademark availability.
 - AI provider/model and cost limits.
-- Initial curated Java Backend curriculum dataset and licensing of resources.
+- Pedagogical review and expansion of the initial project-authored Java Backend graph;
+  learning-resource licensing remains a later content decision.
 - Which IT specialization follows Java Backend and the evidence required to prioritize it.
 - Visual graph library selection after a React Flow versus Cytoscape.js spike.
 - Whether later review data justifies a versioned move from interval policy v1 to FSRS.
@@ -89,12 +94,47 @@ plan or ADR change.
   five-session cap, logout revocation, and ownership derived from the principal.
 - Public goal-template list; authenticated idempotent active-goal create/read.
 - Multi-stage non-root images, Compose app profile, pinned-action CI, run/test/audit scripts.
+- SkillPath Design System (UI UX Pro Max): Minimalist Technical Swiss (Border-First)
+  with Inter + JetBrains Mono typography, Slate neutrals, 8pt spatial grid, and 4–8px
+  radii. Includes 5 pedagogical knowledge state tokens (Unreached, Learning, Review Due,
+  Mastered, Blocked), 15.8:1 text contrast, accessible form error associations, and
+  a Today Command Center layout with high-value task preview.
+
+## Frontend design system baseline
+
+- Architecture: Border-first, zero-gradient, zero-glassmorphism technical interface.
+- Typography: Inter for UI; JetBrains Mono for syntax, IDs, and tabular figures.
+- Tokens: Centralized CSS variables in `src/shared/styles/global.css` (`--sp-*`).
+- Semantic Knowledge States: Teal 700 (`#0f766e`) for Mastered, Blue 600 (`#1d4ed8`) for Learning,
+  Amber 700 (`#b45309`) for Review Due, Rose 700 (`#be123c`) for Blocked.
+- Accessibility (WCAG 2.2 AA): 42–44px minimum touch targets, `aria-describedby` field error
+  association, `aria-invalid` flags, `onBlur` validation, and `@media (prefers-reduced-motion)`.
+- Screen Surface:
+  - Header: Workstation navigation shell with track indicator and daily countdown.
+  - Auth: Accessible Login and Register forms with field-level live descriptions.
+  - Goal Setup: Track selection cards with topic tags and segmented study-minute pills.
+  - Active Goal: "Today Command Center" displaying today's high-value task, daily budget,
+    and active track specifications.
+
+## Implemented Phase 2 surface
+
+- Flyway V6 graph/version/node/relation/goal-mapping/lifecycle-audit schema and V7
+  project-authored `JAVA_BACKEND` v1 seed: 17 nodes and 23 relations.
+- Pure deterministic validation, cycle paths, stable topology, direct/transitive
+  traversal, and non-persisted prerequisite-frontier fixtures.
+- Public, published-only node/prerequisite/dependent and bounded goal-graph queries with
+  version stamps and opaque cursors.
+- `CURATOR`/`ADMIN` validation and publication with CSRF, principal-derived audit actor,
+  idempotent replay, atomic retire/publish/audit, and one-winner concurrency behavior.
+- Goal-owned HTTP adapter delegates through the public knowledge application contract;
+  no cross-module persistence import or new graph dependency was introduced.
 
 ## Next approved work sequence
 
-1. Discover/design Phase 2 Knowledge Graph using the approved plan workflow.
-2. Run the bounded React Flow versus Cytoscape.js visualization spike before selecting
-   a graph rendering dependency.
+1. Discover/design Phase 3 Assessment using the approved plan workflow and the
+   published knowledge-node/version contracts.
+2. Keep the React Flow versus Cytoscape.js visualization comparison as a bounded later
+   spike; Phase 2 adds no graph-rendering dependency or learner roadmap UI.
 3. Continue Assessment, Knowledge State, Learning Task, Planner, and Adaptive Loop in
    roadmap order; keep curriculum data generic across IT specializations.
 
