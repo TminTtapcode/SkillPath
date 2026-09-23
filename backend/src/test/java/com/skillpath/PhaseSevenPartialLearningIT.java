@@ -46,7 +46,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(properties={"debug=false","skillpath.outbox.enabled=false",
-        "skillpath.phase7.task-check-enabled=true"})
+        "skillpath.phase7.task-check-enabled=true","skillpath.phase7.replan-worker-enabled=false"})
 @AutoConfigureMockMvc
 @Testcontainers
 class PhaseSevenPartialLearningIT {
