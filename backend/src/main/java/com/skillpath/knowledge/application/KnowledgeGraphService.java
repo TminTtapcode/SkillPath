@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentKnowledgeQueries {
+public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentKnowledgeQueries, LearningKnowledgeQueries {
 
     private static final int MAX_LIMIT = 200;
     private static final int MAX_DEPTH = 10;
@@ -143,6 +143,27 @@ public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentK
                 .map(node -> new NodeSummary(node.id(), node.slug(), node.name()))
                 .toList();
         return new AssessmentGraph(graph.version().id(), graph.version().curriculumKey(), nodes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LearningGraph publishedLearningGraph(long goalTemplateId) {
+        GraphSnapshot graph = store.findPublishedByGoalTemplate(goalTemplateId)
+                .orElseThrow(() -> notFound(
+                        "PUBLISHED_GOAL_GRAPH_NOT_FOUND", "Published goal graph was not found."));
+        Set<Long> members = graph.goalKnowledge().stream()
+                .filter(mapping -> mapping.goalTemplateId() == goalTemplateId)
+                .map(GoalKnowledge::knowledgeNodeId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> blockedByPrerequisite = graph.relations().stream()
+                .filter(KnowledgeRelation::activePrerequisite)
+                .filter(edge -> members.contains(edge.sourceNodeId()) && members.contains(edge.targetNodeId()))
+                .map(KnowledgeRelation::targetNodeId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> roots = members.stream()
+                .filter(id -> !blockedByPrerequisite.contains(id))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new LearningGraph(graph.version().id(), graph.version().curriculumKey(), roots);
     }
 
     @Override

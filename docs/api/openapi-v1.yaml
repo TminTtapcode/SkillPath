@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: SkillPath API
   version: v1
-  description: SkillPath identity, goal, graph, assessment, progress, and review contracts through Phase 4.
+  description: SkillPath identity, goal, graph, assessment, progress, review, and learner-selected learning contracts through Phase 5.
 servers:
   - url: http://localhost:8080
 paths:
@@ -468,6 +468,109 @@ paths:
           description: Deterministic replay completed.
           content: { application/json: { schema: { $ref: '#/components/schemas/ProgressRebuildResponse' } } }
         '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/sequences:
+    get:
+      operationId: listLearningSequences
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '200':
+          description: Active compatible learner-selected sequences; never a personalized plan.
+          headers: { Content-Language: { $ref: '#/components/headers/ContentLanguage' } }
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/LearningSequenceResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/sequences/{key}:
+    get:
+      operationId: getLearningSequence
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/AcceptLanguage' }
+      responses:
+        '200':
+          description: Bounded sequence description.
+          headers: { Content-Language: { $ref: '#/components/headers/ContentLanguage' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/LearningSequenceResponse' } } }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/sequences/{key}/sessions:
+    post:
+      operationId: startLearningSession
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/CsrfHeader' }
+        - { $ref: '#/components/parameters/IdempotencyHeader' }
+      responses:
+        '200': { description: Existing or replayed active session, content: { application/json: { schema: { $ref: '#/components/schemas/LearningStartResponse' } } } }
+        '201': { description: New learner-selected session, content: { application/json: { schema: { $ref: '#/components/schemas/LearningStartResponse' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/sessions/active:
+    get:
+      operationId: getActiveLearningSession
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '200':
+          description: Current study session from pinned task snapshots.
+          headers: { Content-Language: { $ref: '#/components/headers/ContentLanguage' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/LearningSessionResponse' } } }
+        '204': { description: No active learner-selected session. }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/sessions/{id}:
+    get:
+      operationId: getLearningSession
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/AcceptLanguage' }
+      responses:
+        '200':
+          description: Owned active or historical study session.
+          headers: { Content-Language: { $ref: '#/components/headers/ContentLanguage' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/LearningSessionResponse' } } }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/tasks/{id}/start:
+    post:
+      operationId: startLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      responses: { '200': { description: Task started or replayed, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '404': { $ref: '#/components/responses/Problem' }, '409': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/tasks/{id}/complete:
+    post:
+      operationId: completeLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCompleteRequest' } } } }
+      responses: { '200': { description: Engagement-only completion or replay, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '404': { $ref: '#/components/responses/Problem' }, '409': { $ref: '#/components/responses/Problem' }, '422': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/tasks/{id}/skip:
+    post:
+      operationId: skipLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LearningReasonRequest' } } } }
+      responses: { '200': { description: Task skipped and session stopped, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '409': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/tasks/{id}/blocked:
+    post:
+      operationId: blockLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LearningReasonRequest' } } } }
+      responses: { '200': { description: Task blocked, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '409': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/tasks/{id}/resume:
+    post:
+      operationId: resumeLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      responses: { '200': { description: Blocked task resumed, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '409': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/tasks/{id}/abandon:
+    post:
+      operationId: abandonLearningTask
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LearningReasonRequest' } } } }
+      responses: { '200': { description: Task abandoned and session stopped, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '409': { $ref: '#/components/responses/Problem' } }
 components:
   securitySchemes:
     cookieSession:
@@ -489,6 +592,11 @@ components:
       required: true
       schema:
         type: string
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' }
     GoalTemplateId:
       name: goalTemplateId
       in: path
@@ -531,6 +639,84 @@ components:
           schema:
             $ref: '#/components/schemas/ApiProblem'
   schemas:
+    LearningSequenceStep:
+      type: object
+      required: [position, activityType, minutes, title]
+      properties:
+        position: { type: integer, minimum: 1 }
+        activityType: { type: string, enum: [LEARN, PRACTICE, RECALL] }
+        minutes: { type: integer, minimum: 1 }
+        title: { type: string }
+    LearningSequenceResponse:
+      type: object
+      required: [key, version, graphVersionId, title, description, totalMinutes, steps]
+      properties:
+        key: { type: string }
+        version: { type: integer, minimum: 1 }
+        graphVersionId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        totalMinutes: { type: integer, minimum: 1 }
+        steps: { type: array, items: { $ref: '#/components/schemas/LearningSequenceStep' } }
+    LearningChecklistStep:
+      type: object
+      required: [id, label]
+      properties:
+        id: { type: string }
+        label: { type: string }
+    LearningTaskResponse:
+      type: object
+      required: [id, position, status, activityType, evaluationMode, plannedMinutes, title, instructions, resourceTitle, resourceBody, checklist]
+      properties:
+        id: { type: string }
+        position: { type: integer, minimum: 1 }
+        status: { type: string, enum: [ASSIGNED, IN_PROGRESS, BLOCKED, COMPLETED, SKIPPED, ABANDONED, EXPIRED] }
+        activityType: { type: string, enum: [LEARN, PRACTICE, RECALL] }
+        evaluationMode: { type: string, enum: [NONE, SELF_REPORT] }
+        plannedMinutes: { type: integer, minimum: 1 }
+        actualMinutes: { type: [integer, 'null'], minimum: 0, maximum: 360 }
+        title: { type: string }
+        instructions: { type: string }
+        resourceTitle: { type: string }
+        resourceBody: { type: string }
+        checklist: { type: array, items: { $ref: '#/components/schemas/LearningChecklistStep' } }
+    LearningSessionResponse:
+      type: object
+      required: [id, sequenceKey, title, status, graphVersionId, assignmentSource, startedAt, tasks]
+      properties:
+        id: { type: string }
+        sequenceKey: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [ACTIVE, COMPLETED, STOPPED] }
+        graphVersionId: { type: string }
+        assignmentSource: { type: string, enum: [LEARNER_SELECTED, PLANNER] }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        tasks: { type: array, items: { $ref: '#/components/schemas/LearningTaskResponse' } }
+    LearningStartResponse:
+      type: object
+      required: [sessionId, replayed]
+      properties:
+        sessionId: { type: string }
+        replayed: { type: boolean }
+    LearningCommandResponse:
+      type: object
+      required: [taskId, status, replayed]
+      properties:
+        taskId: { type: string }
+        status: { type: string }
+        replayed: { type: boolean }
+    LearningCompleteRequest:
+      type: object
+      required: [actualMinutes, completedStepIds]
+      properties:
+        actualMinutes: { type: integer, minimum: 0, maximum: 360 }
+        completedStepIds: { type: array, maxItems: 20, items: { type: string } }
+    LearningReasonRequest:
+      type: object
+      required: [reasonCode]
+      properties:
+        reasonCode: { type: string, enum: [TIME, DIFFICULT, OTHER] }
     CsrfResponse:
       type: object
       required: [headerName, parameterName, token]

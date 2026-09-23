@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-A knowledge node describes **what can be known**. A learning task describes **what a learner should do now**. The planner selects task variants; it must not convert a node directly into vague instructions.
+A knowledge node describes **what can be known**. A learning task describes a bounded action. In Phase 5, the learner explicitly chooses a curated sequence; this is not a personalized recommendation. From Phase 6 onward, Planner selects task variants and may assign them through Learning's application contract. Neither path converts a node directly into vague instructions.
 
 ## 2. Model
 
@@ -28,7 +28,7 @@ Maps a task to one or more nodes with `role` (`PRIMARY`, `SUPPORTING`, `PREREQUI
 
 ### LearningTask
 
-An assigned instance containing `user_id`, `user_goal_id`, `template_id/version`, `planner_decision_id`, `status`, planned duration, task payload snapshot, assigned/start/completion timestamps, and optimistic version.
+An assigned instance containing `user_id`, `user_goal_id`, `template_id/version`, `assignment_source`, nullable `planner_decision_id`, `status`, planned duration, bilingual task payload snapshot, assigned/start/completion timestamps, and optimistic version. Exactly one provenance applies: `LEARNER_SELECTED` requires a null planner decision; future `PLANNER` requires a non-null decision. Browser commands cannot submit either authority field.
 
 Status transitions:
 
@@ -45,6 +45,7 @@ stateDiagram-v2
 ```
 
 Terminal status cannot be changed except through an explicit correction command with audit record.
+For a learner-selected sequence, skipping an `ASSIGNED` step or abandoning an `IN_PROGRESS` step stops the session; it does not mark a partial sequence complete. A blocked step may resume. Automatic expiry is not active in Phase 5.
 
 ## 3. Task composition
 
@@ -66,6 +67,7 @@ A task can reference resources and questions, but resources/questions remain own
 - Marking a reading task complete does not create mastery evidence by itself.
 - Objective/rubric/test-case evaluation can create evidence through Assessment.
 - Self-report may create engagement metadata and very low-reliability evidence only if policy explicitly allows it.
+- Phase 5 permits **engagement metadata only** for `SELF_REPORT`/`NONE`. It emits no Assessment attempt, concept evidence, Knowledge State change, review advancement, or planner trigger. A future evidence policy must be versioned and approved; merely completing a checklist never establishes mastery.
 - Completion command is idempotent.
 - Actual minutes inform planning estimates but do not directly increase mastery.
 
@@ -85,24 +87,29 @@ A long project task may be chunked only at declared checkpoints. Each checkpoint
 
 `Resource` includes title, type, canonical URL/content reference, provider, difficulty, estimated minutes, license/source metadata, and status.
 
+Phase 5 uses only project-authored internal resource versions and Vietnamese presentation overlays. The initial 30-minute Java Backend programming-flow sequence has 10-minute learn, 15-minute practice, and 5-minute recall steps mapped to the root programming-fundamentals node. All task/resource text and checklist IDs are pinned at assignment. Historical sessions remain readable after catalog retirement; new sessions use only compatible active versions.
+
 `KnowledgeResource` selects the exact section/anchor, purpose, estimated minutes, and compatible node/version. Do not tell the learner to read an entire large documentation site when a bounded section is intended.
 
 ## 8. Commands
 
 ```text
-assignTask(decisionId, templateVersion)
+assignTask(decisionId, templateVersion) // Phase 6 planner contract, not Phase 5 browser API
+startLearnerSelectedSequence(userId, sequenceKey, idempotencyKey)
 startTask(userId, taskId)
 completeTask(userId, taskId, completionPayload, idempotencyKey)
 skipTask(userId, taskId, reason)
 reportBlocked(userId, taskId, reason)
+resumeTask(userId, taskId)
+abandonTask(userId, taskId, reason)
 ```
 
 ## 9. Acceptance criteria
 
 - Assigned task preserves template/content version.
 - User cannot access or complete another user's task.
-- Duplicate completion produces one outcome/evaluation request.
+- In Phase 5, duplicate completion produces one engagement/audit outcome and **no** evaluation request. All task commands use owner-scoped idempotency keys and the declared lifecycle. A later evaluated task may emit one evaluation request under its own approved policy.
 - Reading completion alone does not raise application mastery.
-- A 30-minute plan selects a pedagogically valid short variant.
+- A future 30-minute personalized plan selects a pedagogically valid short variant; the Phase 5 sequence is explicitly learner-selected.
 - Retired templates remain readable historically but are not newly assigned.
 - Two repeated failures lead to an alternative/remedial selection when available.

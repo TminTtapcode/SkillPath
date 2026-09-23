@@ -67,4 +67,11 @@ class ArchitectureTest {
                 .should().dependOnClassesThat().resideInAPackage("..review.infrastructure.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void learningPersistenceRemainsPrivate() {
+        noClasses().that().resideOutsideOfPackage("..learning.infrastructure.persistence..")
+                .should().dependOnClassesThat().resideInAPackage("..learning.infrastructure.persistence..")
+                .check(classes);
+    }
 }

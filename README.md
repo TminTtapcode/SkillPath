@@ -32,6 +32,12 @@ with time-decayed effective mastery and confidence. Learners can inspect the loc
 state at `/knowledge`; `review-interval-v1` schedules mastered concepts. A personalized
 Today plan is intentionally still a later phase.
 
+Phase 5 adds a learner-selected, project-authored 30-minute Java Backend foundation
+sequence at `/learning`. It has learn, practice, and recall steps with bilingual
+content, safe resume, and idempotent task commands. Completing these self-reported
+steps records activity only; it does not grade work or change mastery. Personalized
+Today planning remains Phase 6 work.
+
 The current learner journey is available in Vietnamese and English. New browsers default
 to Vietnamese, the header selector persists the browser preference, and localized goal,
 knowledge, and diagnostic content keeps the same domain IDs and scoring. New registration

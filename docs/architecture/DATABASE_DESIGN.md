@@ -20,7 +20,7 @@
 | Assessment | `questions`, `question_versions`, `question_knowledge`, `assessment_sessions`, `answer_attempts`, `attempt_evidence` |
 | Localization overlays | `goal_template_translations`, `knowledge_node_translations`, `question_version_translations` |
 | Progress | `knowledge_evidence`, `user_knowledge`, `user_misconceptions` |
-| Learning | `resources`, `knowledge_resources`, `task_templates`, `task_template_knowledge`, `learning_tasks`, `learning_sessions` |
+| Learning | `resources`, `resource_versions`, `resource_version_translations`, `knowledge_resources`, `task_templates`, `task_template_versions`, `task_template_translations`, `task_template_knowledge`, `learning_sequences`, `learning_sequence_items`, `learning_sessions`, `learning_tasks`, `learning_task_events`, `learning_command_receipts` |
 | Planner | `planner_policies`, `planning_snapshots`, `planner_decisions`, `planner_decision_candidates`, `daily_plans`, `daily_plan_items` |
 | Review | `review_schedules`, `review_attempts` |
 | Reliability | `outbox_events`, `idempotency_records` |
@@ -33,8 +33,9 @@ Phase 1 physically implements `users`, `user_credentials`, `user_roles`,
 `question_versions`, `question_knowledge`, `assessment_sessions`,
 `assessment_session_questions`, `answer_attempts`, `attempt_evidence`, and the generic
 `outbox_events` reliability envelope. V10/V11 add Vietnamese presentation overlays for
-the canonical goal template, 17 knowledge nodes, and eight question versions. Later
-table groups remain logical design only.
+the canonical goal template, 17 knowledge nodes, and eight question versions. V12/V13
+physically add Progress/Review and outbox leasing. V14–V16 physically add the Learning
+catalog, bilingual seed, and execution ledger. Planner tables remain logical design.
 
 Flyway history at the Phase 1 boundary:
 
@@ -53,6 +54,9 @@ Flyway history at the Phase 1 boundary:
 | V11 | Project-authored Vietnamese goal, graph, and diagnostic content |
 | V12 | Outbox leases/retries plus append-only progress evidence and deterministic projection |
 | V13 | Review schedule/attempt schema and allowlisted misconception definitions |
+| V14 | Versioned resource/task/sequence catalog and Vietnamese presentation overlays |
+| V15 | Project-authored Java Backend 30-minute learn/practice/recall sequence |
+| V16 | Learner-owned pinned sessions/tasks, generated active-goal uniqueness, lifecycle audit, and idempotency receipts |
 
 V4 and V5 intentionally demonstrate the forward-fix rule: an applied migration was
 not rewritten after integration validation exposed a mismatch/context conflict.
@@ -109,6 +113,13 @@ question versions. Unique attempt idempotency and session-question keys, unique
 attempt-evidence source keys, and unique outbox event keys form layered duplicate
 protection. Attempt, evidence, final session completion, and pending outbox records are
 written atomically.
+
+Phase 5 uses a generated nullable `active_goal_id` to enforce one active learning
+session per goal. Task rows retain immutable bilingual content snapshots and nullable
+planner decision IDs constrained by assignment source. Owner-scoped command receipts,
+optimistic task versions, and append-only task events protect duplicate/concurrent
+transitions. These are engagement records only: no FK or write path grants Learning
+authority over Assessment evidence, Progress, Review, or Planner decisions.
 
 Localization tables are owned beside their canonical sources. Their composite keys bind
 one allowlisted locale to one immutable source version. English remains in the source

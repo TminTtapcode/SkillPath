@@ -6,6 +6,8 @@ import { DiagnosticPage } from '../features/assessment/DiagnosticPage'
 import { ActiveGoalPage } from '../features/goals/ActiveGoalPage'
 import { GoalSetupPage } from '../features/goals/GoalSetupPage'
 import { KnowledgeStatePage } from '../features/progress/KnowledgeStatePage'
+import { LearningCatalogPage } from '../features/learning/LearningCatalogPage'
+import { LearningSessionPage } from '../features/learning/LearningSessionPage'
 import { I18nProvider, LanguageSelector, useI18n } from '../shared/i18n/I18n'
 
 const queryClient = new QueryClient({
@@ -65,6 +67,11 @@ function AppContent() {
           <Route path="/goal" element={<ActiveGoalPage />} />
           <Route path="/assessment/diagnostic" element={<DiagnosticPage />} />
           <Route path="/knowledge" element={<KnowledgeStatePage />} />
+          <Route path="/learning" element={<LearningCatalogPage />} />
+          <Route
+            path="/learning/session/:id"
+            element={<LearningSessionPage />}
+          />
           <Route path="*" element={<Navigate to="/goal" replace />} />
         </Routes>
       </main>

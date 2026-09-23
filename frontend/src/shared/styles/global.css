@@ -1015,6 +1015,53 @@ dd {
    Responsive & Accessibility
    ========================================================================== */
 
+.learning-panel {
+  display: grid;
+  gap: var(--sp-space-4);
+}
+
+.learning-sequence,
+.learning-task,
+.learning-resource {
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-md);
+  padding: var(--sp-space-4);
+  background: var(--sp-surface-card);
+}
+
+.learning-sequence ol {
+  padding-left: 1.5rem;
+}
+
+.learning-checklist,
+.learning-reason,
+.learning-minutes {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin-block: var(--sp-space-4);
+}
+
+.learning-checklist label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  min-height: 44px;
+}
+
+.learning-checklist input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.learning-minutes input,
+.learning-reason select {
+  max-width: 12rem;
+}
+
+.learning-actions {
+  flex-wrap: wrap;
+}
+
 @media (max-width: 640px) {
   .site-header-inner {
     width: calc(100% - 1.5rem);

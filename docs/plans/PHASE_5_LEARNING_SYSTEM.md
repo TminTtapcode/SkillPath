@@ -2,7 +2,7 @@
 
 ## Status
 
-`DRAFT — discover/design on 2026-09-23; owner approval required before implementation`
+`DONE — P5.0–P5.5 implemented and validated locally on 2026-09-23`
 
 ## Objective and user story
 
@@ -29,10 +29,9 @@ Today plan. Phase 7 will close the evaluation → state → replan loop.
 
 ## Current-state evidence
 
-- The last committed baseline is `1a03544`; Phase 3, localization, and Phase 4 are
-  implemented but remain uncommitted in a large working tree. Preserve those changes;
-  accept/commit a baseline before Phase 5 implementation as `PROJECT_CONTEXT.md`
-  already requires.
+- At discovery the last committed baseline was `1a03544`. Before implementation,
+  Phase 3, localization, Phase 4, and this design were committed and pushed as
+  `3ff6503`, leaving a clean accepted baseline.
 - Flyway V1–V13 exists. Phase 4 provides an evidence ledger, knowledge projection,
   review schedules, and leased outbox dispatch. There is no `learning` package,
   learning schema, task assignment, or learning frontend route.
@@ -324,8 +323,9 @@ ranking, review completion, or migration outside this scope needs owner review.
 
 ## Risks and open decisions
 
-- Owner must accept learner-selected study as the Phase 5 bridge; the roadmap phrase
-  “Today task UI” must not be mistaken for Phase 6's personalized Today plan.
+- The owner accepted learner-selected study as the Phase 5 bridge on 2026-09-23.
+  The roadmap phrase “Today task UI” must not be mistaken for Phase 6's personalized
+  Today plan.
 - A self-check is pedagogical practice but not reliable skill evidence. The full MVP
   adaptive-loop story will not pass until task-specific evaluation and replanning are
   implemented in later phases.
@@ -340,9 +340,27 @@ ranking, review completion, or migration outside this scope needs owner review.
 
 ## Validation results
 
-Design only. No Phase 5 implementation or Phase 5 tests have run. Record exact
-commands, exit codes, test counts, migration paths, warnings, and deviations here
-before marking `DONE`.
+- Backend offline Maven `clean verify` with the local Maven repository: exit 0;
+  26 unit/architecture tests and 21 MySQL Testcontainers integration tests passed.
+  This includes clean V1–V16 migration, V13–V16 upgrade, lifecycle/security/API,
+  concurrency, and Phase 1–4 regressions. A final targeted `verify` after the
+  missing-goal, malformed-minutes, retired-catalog, and lifecycle edge assertions
+  passed (one unit and two Phase 5 integration tests).
+- `npm --prefix frontend run api:generate`, `format`, `lint`, `test -- --run`,
+  and `build`: exit 0; 13 tests in four files and a 247-module production build.
+- `docker compose config --quiet`, `git diff --check`, and `scripts/audit.ps1`:
+  exit 0; npm audit found zero vulnerabilities.
+- `docker compose --profile app up -d --build`: exit 0, preserving the existing
+  MySQL volume; local backend upgraded from V13 to V16, and backend/frontend/MySQL
+  all reported healthy. `GET http://localhost:5173/learning` returned `200` and
+  backend `/actuator/health` reported `UP`. The frontend proxy returned the expected
+  unauthenticated `401` for `/api/v1/learning/sequences`, not a gateway error.
+- Known tool warnings: Flyway 11.7.2 has not declared MySQL 8.4 tested;
+  Testcontainers shutdown produced Hikari stale-connection warnings; Compose could
+  not read the local Docker CLI config file although configuration succeeded.
+- No new dependency, external curriculum content, AI authority, task-derived
+  evidence, planner ranking, or applied migration edit was introduced. The authored
+  bilingual lesson still needs pedagogical review before production efficacy claims.
 
 ## Documentation updates
 

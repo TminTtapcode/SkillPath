@@ -21,7 +21,7 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
       - name: Verify backend
-        run: ./backend/mvnw -f backend/pom.xml clean verify
+        run: bash ./backend/mvnw -f backend/pom.xml clean verify
 
   frontend:
     runs-on: ubuntu-latest

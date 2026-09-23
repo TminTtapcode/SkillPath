@@ -25,12 +25,12 @@ by `knowledge-state-v1`. Learners can inspect localized effective knowledge stat
 mastered concepts receive deterministic `review-interval-v1` schedules. Phase 4 does
 not create a Today plan—those authorities remain in later phases.
 
-**Phase 5 — Learning system is at discover/design, not implementation.**
-`docs/plans/PHASE_5_LEARNING_SYSTEM.md` proposes a learner-selected, versioned
-learn/practice/recall sequence as an execution bridge. It needs owner approval and an
-accepted Phase 3/localization/Phase 4 baseline before code changes. It does not grant
-Learning the authority to generate a personalized Today plan or raise mastery from
-self-reported task completion.
+**Phase 5 — Learning system P5.0–P5.5 is implemented locally.** A learner with an
+active Java Backend goal can explicitly select a bilingual, versioned 30-minute
+learn/practice/recall sequence, resume it, and record task transitions. Activity is
+self-reported; it creates no assessment evidence, mastery change, review update, or
+personalized Today plan. Validation and remaining risks are in
+`docs/plans/PHASE_5_LEARNING_SYSTEM.md`.
 
 ## Confirmed decisions
 
@@ -77,13 +77,17 @@ self-reported task completion.
   Phase 2 knowledge graph V6/V7 and Phase 3 assessment V8/V9 migrations are
   implemented; V10/V11 add localization overlays; V12/V13 add outbox leasing, the
   evidence ledger/projection, misconceptions, and review schedules.
-  Clean and historical upgrade paths are tested on MySQL 8.4.
+  V14–V16 add the curated Learning catalog, bilingual resource/step seed, immutable
+  execution snapshot, receipts, and lifecycle audit. Clean and historical upgrade
+  paths are tested on MySQL 8.4.
 - Core domain specifications: defined at v1 design level.
-- Learning task and adaptive loop: defined at v1 design level.
+- Learning task execution: implemented for learner-selected, self-reported study;
+  adaptive planner/evaluation remains at v1 design level.
 - Learner-facing visual goal-map/read-model direction: defined for MVP with accessibility and progressive-disclosure constraints.
 - Open-source adoption register, license/provenance workflow, visual-map spike, and post-MVP algorithm evaluation path: defined.
 - API contract: Phase 1 identity/goal, Phase 2 published graph/admin lifecycle, and
-  Phase 3 diagnostic/evidence endpoints are published in `docs/api/openapi-v1.yaml`;
+  Phase 3 diagnostic/evidence and Phase 5 Learning endpoints are published in
+  `docs/api/openapi-v1.yaml`;
   localized reads document `Accept-Language`/`Content-Language`; frontend TypeScript
   types are generated and checked for drift.
 - AI boundary: defined.
@@ -183,12 +187,28 @@ plan or ADR change.
   scoring, idempotency, evidence, outbox payloads, ownership, and authorization remain
   locale-independent. A mid-question language switch preserves the selected option IDs.
 
+## Implemented Phase 5 surface
+
+- Flyway V14–V16 define immutable resource/template versions, the project-authored
+  bilingual Java Backend sequence, goal-owned sessions and task snapshots, scoped
+  idempotency receipts, and append-only transition audit.
+- The Learning API exposes compatible catalog and session reads plus explicit
+  start/resume/task commands. Server-side ownership, CSRF, order, checklist, graph
+  compatibility, and lifecycle rules are enforced; retry and concurrent start are
+  covered by MySQL integration tests.
+- The learner UI has self-selected catalog/session routes, one step at a time,
+  English/Vietnamese content, retry recovery, and clear no-mastery/no-Today-plan
+  language. The Active Goal screen links to study without claiming planner output.
+- An immutable Learning application query contract is available for Phase 6.
+  Learning activity does not emit assessment evidence or mutate Knowledge State,
+  Review, or Progress.
+
 ## Next approved work sequence
 
-1. Commit the completed Phase 3, localization, and Phase 4 baseline.
-2. Review/approve `docs/plans/PHASE_5_LEARNING_SYSTEM.md`, then implement learning
-   resources, task lifecycle, and learner-selected execution; do not introduce planner
-   ranking authority early.
+1. Review and commit the locally implemented Phase 5 slice after final validation.
+2. Discover/design Phase 6 Planner against the published graph, effective knowledge
+   state, review schedule, and immutable Learning catalog; do not treat self-report
+   as evidence or label a manual sequence as a personalized Today plan.
 3. Keep the React Flow versus Cytoscape.js visualization comparison as a bounded later
    spike; Phase 2 adds no graph-rendering dependency or learner roadmap UI.
 4. Continue Learning Task, Planner, and Adaptive Loop in

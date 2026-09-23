@@ -372,10 +372,255 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/learning/sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLearningSequences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/sequences/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getLearningSequence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/sequences/{key}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startLearningSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/sessions/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getActiveLearningSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getLearningSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["skipLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/blocked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["blockLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{id}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["abandonLearningTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        LearningSequenceStep: {
+            position: number;
+            /** @enum {string} */
+            activityType: "LEARN" | "PRACTICE" | "RECALL";
+            minutes: number;
+            title: string;
+        };
+        LearningSequenceResponse: {
+            key: string;
+            version: number;
+            graphVersionId: string;
+            title: string;
+            description: string;
+            totalMinutes: number;
+            steps: components["schemas"]["LearningSequenceStep"][];
+        };
+        LearningChecklistStep: {
+            id: string;
+            label: string;
+        };
+        LearningTaskResponse: {
+            id: string;
+            position: number;
+            /** @enum {string} */
+            status: "ASSIGNED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED" | "SKIPPED" | "ABANDONED" | "EXPIRED";
+            /** @enum {string} */
+            activityType: "LEARN" | "PRACTICE" | "RECALL";
+            /** @enum {string} */
+            evaluationMode: "NONE" | "SELF_REPORT";
+            plannedMinutes: number;
+            actualMinutes?: number | null;
+            title: string;
+            instructions: string;
+            resourceTitle: string;
+            resourceBody: string;
+            checklist: components["schemas"]["LearningChecklistStep"][];
+        };
+        LearningSessionResponse: {
+            id: string;
+            sequenceKey: string;
+            title: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "COMPLETED" | "STOPPED";
+            graphVersionId: string;
+            /** @enum {string} */
+            assignmentSource: "LEARNER_SELECTED" | "PLANNER";
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            tasks: components["schemas"]["LearningTaskResponse"][];
+        };
+        LearningStartResponse: {
+            sessionId: string;
+            replayed: boolean;
+        };
+        LearningCommandResponse: {
+            taskId: string;
+            status: string;
+            replayed: boolean;
+        };
+        LearningCompleteRequest: {
+            actualMinutes: number;
+            completedStepIds: string[];
+        };
+        LearningReasonRequest: {
+            /** @enum {string} */
+            reasonCode: "TIME" | "DIFFICULT" | "OTHER";
+        };
         CsrfResponse: {
             headerName: string;
             parameterName: string;
@@ -669,6 +914,7 @@ export interface components {
         /** @description Preferred learner presentation language. Unsupported values fall back to English. */
         AcceptLanguage: "vi-VN" | "en";
         CsrfHeader: string;
+        IdempotencyHeader: string;
         GoalTemplateId: string;
         NodeId: string;
         VersionId: string;
@@ -1319,6 +1565,329 @@ export interface operations {
                 };
             };
             403: components["responses"]["Problem"];
+        };
+    };
+    listLearningSequences: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active compatible learner-selected sequences; never a personalized plan. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningSequenceResponse"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getLearningSequence: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded sequence description. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningSequenceResponse"];
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    startLearningSession: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing or replayed active session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningStartResponse"];
+                };
+            };
+            /** @description New learner-selected session */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningStartResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getActiveLearningSession: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current study session from pinned task snapshots. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningSessionResponse"];
+                };
+            };
+            /** @description No active learner-selected session. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    getLearningSession: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owned active or historical study session. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningSessionResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    startLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task started or replayed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    completeLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Engagement-only completion or replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    skipLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Task skipped and session stopped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    blockLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Task blocked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    resumeLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Blocked task resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    abandonLearningTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Task abandoned and session stopped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningCommandResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
         };
     };
 }

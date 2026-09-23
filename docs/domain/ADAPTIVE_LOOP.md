@@ -52,6 +52,14 @@ then the learner/node projection is locked and rebuilt from ledger order
 `(observed_at, source_event_id)` before `KnowledgeStateChanged` is emitted. There is no
 broker and no planner invocation in Phase 4.
 
+Phase 5 adds a learner-selected study-session execution path, not the adaptive loop.
+Its start/complete/skip/blocked/resume/abandon commands commit a task transition and
+append-only lifecycle audit in one transaction with an idempotency receipt. It does
+**not** create an unhandled outbox event: the Phase 4 dispatcher would otherwise
+exhaust retries on an unknown event type. Phase 6/7 must register a versioned consumer
+and add the durable event handoff when planner/evaluation orchestration exists.
+Self-reported activity never updates Progress or Review.
+
 ## 4. Plan revision rules
 
 - Preserve completed tasks.

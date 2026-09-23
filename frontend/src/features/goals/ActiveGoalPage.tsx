@@ -126,6 +126,15 @@ export function ActiveGoalPage() {
         </div>
       </article>
 
+      <article className="learning-sequence" aria-labelledby="self-study-title">
+        <p className="eyebrow">{t('learning.eyebrow')}</p>
+        <h2 id="self-study-title">{t('learning.title')}</h2>
+        <p>{t('learning.intro')}</p>
+        <Link className="button-link button-secondary" to="/learning">
+          {t('learning.open')}
+        </Link>
+      </article>
+
       <div>
         <h3 className="metadata-heading">{t('goal.specifications')}</h3>
         <dl className="metadata-grid">

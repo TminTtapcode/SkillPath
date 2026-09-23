@@ -41,6 +41,12 @@ The domain engine is curriculum-neutral. Java Backend is the first published
 curriculum; future IT specializations are introduced as separately versioned
 curriculum/goal graphs and curated content, not as planner code branches.
 
+Phase 5 adds a `learning` module with a Flyway-owned resource/task/sequence catalog,
+learner-owned execution sessions, pinned bilingual task content, and idempotent audit
+transitions. The React UI exposes an explicitly learner-selected study sequence from
+the command center. The personalized Today plan and visual roadmap still await
+Planner; marking a task complete cannot mutate evidence or mastery.
+
 ## Learner roadmap projection
 
 The visual goal map is a read model composed from the published goal subgraph, the

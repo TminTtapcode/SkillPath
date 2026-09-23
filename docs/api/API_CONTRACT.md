@@ -33,8 +33,8 @@ Use consistent codes. Do not leak stack traces, SQL, secrets, answer keys, or ex
 
 ## MVP endpoints
 
-The following Phase 1 through Phase 3 operations are currently implemented and published
-in `openapi-v1.yaml`:
+Phase 1–5 implemented operations are published in `openapi-v1.yaml`. The core
+identity/goal/graph/diagnostic operations include:
 
 ```http
 GET  /api/v1/auth/csrf
@@ -60,8 +60,8 @@ GET  /api/v1/assessments/{sessionId}/result
 Registration creates the profile and an authenticated session. `POST /goals`
 requires `Idempotency-Key`: same key plus the same normalized input replays the
 original result; different input returns `IDEMPOTENCY_KEY_REUSED`; an existing active
-goal returns `ACTIVE_GOAL_ALREADY_EXISTS`. All other endpoint lists below are target MVP
-contracts, not claims of implementation.
+goal returns `ACTIVE_GOAL_ALREADY_EXISTS`. Each section below distinguishes implemented
+endpoints from future target contracts.
 
 Phase 2 knowledge reads expose only the current published curriculum and contain no
 learner state, so they are public like goal-template discovery. Goal-graph queries are
@@ -120,15 +120,43 @@ and option labels may change with locale, but `sessionQuestionId`, `questionVers
 option IDs, answer keys, scoring, evidence, and idempotency input do not. Changing locale
 therefore never submits or advances a diagnostic.
 
+Phase 5 also localizes resource, task, checklist, and sequence presentation. A session
+pins both language snapshots when assigned. Switching language does not change task
+identity, step IDs, actual minutes, command receipts, or lifecycle state.
+
 ### Today/learning
+
+Phase 5 implements a learner-selected study sequence, not the Planner's personalized
+Today plan. The new authenticated routes are:
+
+```http
+GET  /learning/sequences
+GET  /learning/sequences/{key}
+POST /learning/sequences/{key}/sessions
+GET  /learning/sessions/active
+GET  /learning/sessions/{id}
+POST /learning/tasks/{id}/start
+POST /learning/tasks/{id}/complete
+POST /learning/tasks/{id}/skip
+POST /learning/tasks/{id}/blocked
+POST /learning/tasks/{id}/resume
+POST /learning/tasks/{id}/abandon
+```
+
+All writes use `Idempotency-Key` and CSRF. Same key with canonical command input
+replays the saved outcome; a different command/input conflicts. Reads and writes are
+principal-scoped, with cross-owner session/task IDs concealed as `404`. Task completion
+accepts bounded actual minutes and server-declared checklist IDs, not score, evidence,
+mastery, user ID, assignment source, or planner decision. The content snapshot includes
+both languages; locale affects only presentation, never command hashes or task history.
+Self-report records engagement only and cannot change Knowledge State or Review.
+
+The following target routes are reserved for Phase 6/7, not implemented by this
+learner-selected sequence:
 
 ```http
 GET  /learning/today
 PUT  /learning/today/available-minutes
-POST /tasks/{taskId}/start
-POST /tasks/{taskId}/complete
-POST /tasks/{taskId}/skip
-POST /tasks/{taskId}/blocked
 ```
 
 ### Progress

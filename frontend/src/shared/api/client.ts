@@ -17,6 +17,11 @@ export type SubmitAssessmentAttemptInput =
 export type AssessmentAttempt =
   components['schemas']['AssessmentAttemptResponse']
 export type AssessmentResult = components['schemas']['AssessmentResultResponse']
+export type LearningSequence = components['schemas']['LearningSequenceResponse']
+export type LearningSession = components['schemas']['LearningSessionResponse']
+export type LearningTask = components['schemas']['LearningTaskResponse']
+export type LearningStart = components['schemas']['LearningStartResponse']
+export type LearningCommand = components['schemas']['LearningCommandResponse']
 export interface KnowledgeState {
   knowledgeNodeId: string
   knowledgeNodeSlug: string
@@ -171,6 +176,45 @@ export const getDiagnosticResult = (sessionId: string) =>
 
 export const getKnowledgeStates = () =>
   request<KnowledgeStatePage>('/api/v1/knowledge/me?limit=50')
+
+export const listLearningSequences = () =>
+  request<LearningSequence[]>('/api/v1/learning/sequences')
+
+export const getActiveLearningSession = async () =>
+  (await request<LearningSession | undefined>(
+    '/api/v1/learning/sessions/active',
+  )) ?? null
+
+export const getLearningSession = (id: string) =>
+  request<LearningSession>(
+    `/api/v1/learning/sessions/${encodeURIComponent(id)}`,
+  )
+
+export const startLearningSession = (sequenceKey: string, key: string) =>
+  request<LearningStart>(
+    `/api/v1/learning/sequences/${encodeURIComponent(sequenceKey)}/sessions`,
+    { method: 'POST', headers: { 'Idempotency-Key': key } },
+  )
+
+export type LearningOperation =
+  'start' | 'complete' | 'skip' | 'blocked' | 'resume' | 'abandon'
+
+export const commandLearningTask = (
+  taskId: string,
+  operation: LearningOperation,
+  key: string,
+  body?:
+    | components['schemas']['LearningCompleteRequest']
+    | components['schemas']['LearningReasonRequest'],
+) =>
+  request<LearningCommand>(
+    `/api/v1/learning/tasks/${encodeURIComponent(taskId)}/${operation}`,
+    {
+      method: 'POST',
+      headers: { 'Idempotency-Key': key },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    },
+  )
 
 export function resetApiStateForTests() {
   csrf = undefined

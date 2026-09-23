@@ -77,11 +77,12 @@ Exit: deterministic projection passes replay fixtures.
 
 ## Phase 5 — Learning system
 
-Status: discover/design drafted on 2026-09-23 in
-`PHASE_5_LEARNING_SYSTEM.md`; owner approval is required before implementation.
+Status: P5.0–P5.5 implemented locally on 2026-09-23; scope, policy boundary, and
+validation evidence are in `PHASE_5_LEARNING_SYSTEM.md`.
 
 - Curated resources, templates/variants, assignments, lifecycle.
-- Today task UI and completion flow.
+- Learner-selected study-session UI and completion flow; personalized Today plan
+  selection remains with Phase 6.
 
 Exit: user can execute a bounded learn/practice/recall sequence.
 

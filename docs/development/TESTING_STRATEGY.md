@@ -4,6 +4,12 @@ Phase 4 adds pure projection/decay and review-interval fixtures, clean and V11-t
 MySQL migration coverage, idempotent outbox replay, and ownership/role API checks.
 Stored mastery must remain stable while effective mastery changes with an injected clock.
 
+Phase 5 adds pure task lifecycle fixtures, clean V1–V16 and V13–V16 MySQL migration
+coverage, pinned bilingual catalog/assignment checks, owner/CSRF/idempotency/order
+API checks, and frontend start/resume/retry/terminal-state checks. A self-report
+completion must leave Assessment, Progress, and Review row counts unchanged. The UI
+must never present the curated sequence as a personalized Today plan.
+
 ## Test pyramid
 
 ### Unit
