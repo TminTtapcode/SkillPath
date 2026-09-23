@@ -10,6 +10,9 @@
 - Pagination uses stable cursor where data changes frequently; otherwise documented page/size.
 - Return transport DTOs, never persistence entities.
 - IDs are opaque API values even when the MVP stores them as `BIGINT`; clients must not infer order or numeric semantics.
+- Localized learner reads accept `Accept-Language: vi-VN|en`. Unsupported, malformed,
+  or absent values resolve to canonical English. Successful localized responses return
+  the resolved tag in `Content-Language`; IDs and authoritative values never vary by locale.
 
 ## Error envelope
 
@@ -30,7 +33,7 @@ Use consistent codes. Do not leak stack traces, SQL, secrets, answer keys, or ex
 
 ## MVP endpoints
 
-The following Phase 1 and Phase 2 operations are currently implemented and published
+The following Phase 1 through Phase 3 operations are currently implemented and published
 in `openapi-v1.yaml`:
 
 ```http
@@ -48,6 +51,10 @@ GET  /api/v1/knowledge/nodes/{nodeId}/prerequisites
 GET  /api/v1/knowledge/nodes/{nodeId}/dependents
 POST /api/v1/admin/knowledge/versions/{versionId}/validate
 POST /api/v1/admin/knowledge/versions/{versionId}/publish
+POST /api/v1/assessments/diagnostic
+GET  /api/v1/assessments/{sessionId}/next-question
+POST /api/v1/assessments/{sessionId}/attempts
+GET  /api/v1/assessments/{sessionId}/result
 ```
 
 Registration creates the profile and an authenticated session. `POST /goals`
@@ -92,6 +99,27 @@ POST /assessments/{sessionId}/attempts
 GET  /assessments/{sessionId}/result
 ```
 
+Phase 3 implements these four endpoints for authenticated learners. Starting creates
+or resumes one seven-day diagnostic pinned to the active goal, graph version, question
+versions, and `assessment-objective-v1` policy. Attempt submission requires
+`Idempotency-Key`; the same key and normalized payload replays the original attempt,
+while key reuse with a different payload is rejected. Question responses never expose
+answer keys or mappings.
+
+Phase 3 result scores and concept rows are observational evidence answering “what did
+this attempt demonstrate?”. They are not mastery, confidence, prerequisite
+satisfaction, readiness, or a planner recommendation. Knowledge State and Planner
+retain those separate authorities.
+
+### Localization
+
+The localized reads are goal-template discovery and graph, published knowledge node/
+prerequisite/dependent queries, diagnostic next-question, and diagnostic result. English
+is immutable canonical content; Vietnamese is a presentation overlay. Diagnostic prompt
+and option labels may change with locale, but `sessionQuestionId`, `questionVersionId`,
+option IDs, answer keys, scoring, evidence, and idempotency input do not. Changing locale
+therefore never submits or advances a diagnostic.
+
 ### Today/learning
 
 ```http
@@ -111,6 +139,12 @@ GET /knowledge/me/{nodeId}
 GET /knowledge/me/{nodeId}/evidence
 GET /reviews/today
 ```
+
+Phase 4 implements these authenticated, principal-scoped reads plus the ADMIN-only
+`POST /admin/progress/rebuild`. Knowledge responses distinguish stored acquisition
+mastery from time-decayed effective mastery, carry `knowledge-state-v1`, and expose
+append-only evidence provenance without raw answers. The due-review read does not
+assign a learning task or advance an interval.
 
 The roadmap response is a read-only, version-stamped projection containing a bounded
 set of nodes/edges, mutually exclusive `knowledgeStatus`, separate planner overlays

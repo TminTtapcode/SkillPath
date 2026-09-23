@@ -1,21 +1,27 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
 import { z } from 'zod'
 import { login } from '../../shared/api/client'
 import { ErrorNotice } from '../../shared/components/AsyncState'
+import { useI18n } from '../../shared/i18n/I18n'
 
-const schema = z.object({
-  email: z.email('Enter a valid email address.'),
-  password: z.string().min(1, 'Enter your password.').max(128),
-})
-
-type FormValues = z.infer<typeof schema>
+type FormValues = { email: string; password: string }
 
 export function LoginPage() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const schema = useMemo(
+    () =>
+      z.object({
+        email: z.email(t('validation.email')),
+        password: z.string().min(1, t('validation.passwordRequired')).max(128),
+      }),
+    [t],
+  )
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: 'onBlur',
@@ -31,16 +37,16 @@ export function LoginPage() {
 
   return (
     <section className="panel auth-panel">
-      <p className="eyebrow">Welcome back</p>
-      <h1>Sign in</h1>
-      <p className="lede">Continue your personalized learning route.</p>
+      <p className="eyebrow">{t('login.eyebrow')}</p>
+      <h1>{t('login.title')}</h1>
+      <p className="lede">{t('login.lede')}</p>
       {mutation.error && <ErrorNotice error={mutation.error} />}
       <form
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
         noValidate
       >
         <div className="form-group">
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">{t('common.email')}</label>
           <input
             id="email"
             type="email"
@@ -59,7 +65,7 @@ export function LoginPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t('common.password')}</label>
           <input
             id="password"
             type="password"
@@ -82,11 +88,11 @@ export function LoginPage() {
           disabled={mutation.isPending}
           className={mutation.isPending ? 'pending' : ''}
         >
-          {mutation.isPending ? 'Signing in…' : 'Sign in'}
+          {mutation.isPending ? t('login.pending') : t('login.title')}
         </button>
       </form>
       <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>
-        New to SkillPath? <Link to="/register">Create an account</Link>
+        {t('login.new')} <Link to="/register">{t('login.create')}</Link>
       </p>
     </section>
   )

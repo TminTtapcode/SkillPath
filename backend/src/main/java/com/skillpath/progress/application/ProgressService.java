@@ -1,0 +1,30 @@
+package com.skillpath.progress.application;
+
+import com.skillpath.knowledge.application.AssessmentKnowledgeQueries;
+import com.skillpath.progress.domain.KnowledgeStatePolicyV1;
+import com.skillpath.shared.api.ApiException;
+import com.skillpath.shared.localization.SupportedLocale;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ProgressService {
+    private final ProgressStore store;private final AssessmentKnowledgeQueries knowledge;private final Clock clock;private final KnowledgeStatePolicyV1 policy=new KnowledgeStatePolicyV1();
+    public ProgressService(ProgressStore store,AssessmentKnowledgeQueries knowledge,Clock clock){this.store=store;this.knowledge=knowledge;this.clock=clock;}
+    @Transactional(readOnly=true) public Page states(long user,int limit,long after,SupportedLocale locale){validate(limit);List<ProgressStore.StateRow> rows=store.states(user,limit+1,after);boolean more=rows.size()>limit;if(more)rows=rows.subList(0,limit);return new Page(enrich(user,rows,locale),more,more?Long.toString(rows.getLast().id()):null);}
+    @Transactional(readOnly=true) public StateView state(long user,long node,SupportedLocale locale){ProgressStore.StateRow row=store.state(user,node);if(row==null)throw new ApiException(HttpStatus.NOT_FOUND,"KNOWLEDGE_STATE_NOT_FOUND","Knowledge state was not found.");return enrich(user,List.of(row),locale).getFirst();}
+    @Transactional(readOnly=true) public EvidencePage evidence(long user,long node,int limit,long after){validate(limit);if(store.state(user,node)==null)throw new ApiException(HttpStatus.NOT_FOUND,"KNOWLEDGE_STATE_NOT_FOUND","Knowledge state was not found.");var rows=store.evidencePage(user,node,limit+1,after);boolean more=rows.size()>limit;if(more)rows=rows.subList(0,limit);return new EvidencePage(rows,more,more?Long.toString(rows.getLast().id()):null);}
+    @Transactional public int rebuild(){return store.rebuildAll(clock.instant(),policy);}
+    private List<StateView> enrich(long user,List<ProgressStore.StateRow> rows,SupportedLocale locale){if(rows.isEmpty())return List.of();Map<Long,List<ProgressStore.StateRow>> byGraph=rows.stream().collect(Collectors.groupingBy(ProgressStore.StateRow::graphVersionId));Map<Long,AssessmentKnowledgeQueries.NodeSummary> names=byGraph.entrySet().stream().flatMap(e->knowledge.nodeSummaries(e.getKey(),e.getValue().stream().map(ProgressStore.StateRow::nodeId).collect(Collectors.toSet()),locale).stream()).collect(Collectors.toMap(AssessmentKnowledgeQueries.NodeSummary::id,n->n));Instant now=clock.instant();return rows.stream().map(row->{var effective=policy.project(store.evidence(user,row.nodeId()),now);var n=names.get(row.nodeId());return new StateView(row,n==null?"unknown":n.slug(),n==null?"Unknown":n.name(),effective.effectiveMastery(),effective.effectiveStatus().name());}).toList();}
+    private void validate(int limit){if(limit<1||limit>100)throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_PAGE_LIMIT","Limit must be 1-100.");}
+    public record StateView(ProgressStore.StateRow stored,String nodeSlug,String nodeName,java.math.BigDecimal effectiveMastery,String effectiveStatus){}
+    public record Page(List<StateView> items,boolean hasMore,String nextCursor){}
+    public record EvidencePage(List<ProgressStore.EvidenceRow> items,boolean hasMore,String nextCursor){}
+}

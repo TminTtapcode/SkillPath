@@ -12,8 +12,12 @@ import com.skillpath.knowledge.domain.KnowledgeRelationStatus;
 import com.skillpath.knowledge.domain.KnowledgeRelationType;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,18 +28,21 @@ class JpaKnowledgeGraphStore implements KnowledgeGraphStore {
     private final KnowledgeRelationJpaRepository relations;
     private final GoalKnowledgeJpaRepository goalKnowledge;
     private final KnowledgeVersionEventJpaRepository events;
+    private final JdbcTemplate jdbcTemplate;
 
     JpaKnowledgeGraphStore(
             GraphVersionJpaRepository versions,
             KnowledgeNodeJpaRepository nodes,
             KnowledgeRelationJpaRepository relations,
             GoalKnowledgeJpaRepository goalKnowledge,
-            KnowledgeVersionEventJpaRepository events) {
+            KnowledgeVersionEventJpaRepository events,
+            JdbcTemplate jdbcTemplate) {
         this.versions = versions;
         this.nodes = nodes;
         this.relations = relations;
         this.goalKnowledge = goalKnowledge;
         this.events = events;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -59,6 +66,24 @@ class JpaKnowledgeGraphStore implements KnowledgeGraphStore {
                 .flatMap(node -> versions.findById(node.graphVersionId))
                 .filter(version -> version.status.equals(GraphVersionStatus.PUBLISHED.name()))
                 .map(this::snapshot);
+    }
+
+    @Override
+    public Map<Long, NodeTranslation> findNodeTranslations(long graphVersionId, String locale) {
+        return jdbcTemplate.query(
+                        """
+                        SELECT knowledge_node_id, name, description
+                        FROM knowledge_node_translations
+                        WHERE graph_version_id = ? AND locale = ?
+                        """,
+                        (resultSet, rowNumber) -> new NodeTranslation(
+                                resultSet.getLong("knowledge_node_id"),
+                                resultSet.getString("name"),
+                                resultSet.getString("description")),
+                        graphVersionId,
+                        locale)
+                .stream()
+                .collect(Collectors.toMap(NodeTranslation::nodeId, Function.identity()));
     }
 
     @Override

@@ -28,6 +28,7 @@ services:
     profiles: ["app"]
     build:
       context: ./backend
+    restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-skillpath}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-skillpath_app}

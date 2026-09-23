@@ -14,13 +14,28 @@ flowchart LR
 ```
 
 Phase 1 is executable: a learner can register, sign in, choose the seeded Java
-Backend Intern template, create one active goal, reload it, and sign out. Assessment
-and adaptive planning remain intentionally scheduled for later phases.
+Backend Intern template, create one active goal, reload it, and sign out.
 
 Phase 2 adds the published, versioned Java Backend knowledge graph. Clients can query
 goal graphs, nodes, prerequisites, and dependents; curator/admin sessions can validate
 and atomically publish successor graph versions. The visual learner roadmap remains a
 later phase.
+
+Phase 3 adds an eight-question learner diagnostic with safe resume, objective
+deterministic scoring, idempotent attempts, concept-level evidence, and a durable
+handoff for the future Knowledge State module. Diagnostic output is observational
+evidence, not mastery or a learning recommendation.
+
+Phase 4 consumes that handoff through an idempotent leased outbox, preserves an
+append-only evidence ledger, and builds deterministic `knowledge-state-v1` projections
+with time-decayed effective mastery and confidence. Learners can inspect the localized
+state at `/knowledge`; `review-interval-v1` schedules mastered concepts. A personalized
+Today plan is intentionally still a later phase.
+
+The current learner journey is available in Vietnamese and English. New browsers default
+to Vietnamese, the header selector persists the browser preference, and localized goal,
+knowledge, and diagnostic content keeps the same domain IDs and scoring. New registration
+and goal forms default to `Asia/Ho_Chi_Minh`.
 
 ## Quick start
 
@@ -48,6 +63,9 @@ Alternatively, run the complete containerized stack with
 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-start.ps1`; use
 the matching `dev-stop.ps1` command to stop it. If local policy already permits
 project scripts, the shorter `.\scripts\...` form also works.
+The Compose backend restarts after a transient database startup failure. If the
+browser reports 502, check `docker compose --profile app ps --all` and
+`docker compose logs backend` before retrying the page.
 
 ## Validate
 
@@ -60,7 +78,7 @@ Portable equivalents are `backend/mvnw -f backend/pom.xml clean verify`, the npm
 scripts in `frontend/package.json`, and `docker compose config`. The backend
 integration suite uses a real `mysql:8.4` Testcontainer, never H2.
 
-The canonical Phase 1 contract is `docs/api/openapi-v1.yaml`. Regenerate frontend
+The canonical API contract is `docs/api/openapi-v1.yaml`. Regenerate frontend
 types with `npm --prefix frontend run api:generate`; CI rejects contract drift.
 
 ## MySQL Workbench

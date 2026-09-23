@@ -184,3 +184,11 @@ của progress/review/planner và không thuộc quyền ghi của module knowle
 - Runtime validate/publish commands require `CURATOR` or `ADMIN`. Publication locks the
   curriculum versions and atomically retires the old version, publishes the successor,
   and records lifecycle audit events.
+
+## 10. Localized presentation contract
+
+English node name/description fields remain the canonical graph content. A Vietnamese
+translation is keyed by the same graph version and node ID and may change only display
+text. Published reads can overlay that text for `vi-VN`; slugs, node IDs, graph versions,
+relations, traversal order, cursors, prerequisite semantics, and planner authority are
+locale-independent. Missing or invalid translation data falls back to canonical English.

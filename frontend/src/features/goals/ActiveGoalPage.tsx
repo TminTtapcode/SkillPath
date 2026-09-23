@@ -1,9 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router'
-import { ApiError, getActiveGoal, getMe, logout } from '../../shared/api/client'
+import {
+  ApiError,
+  getActiveGoal,
+  getMe,
+  logout,
+  startDiagnostic,
+} from '../../shared/api/client'
 import { ErrorNotice, Loading } from '../../shared/components/AsyncState'
+import { useI18n } from '../../shared/i18n/I18n'
 
 export function ActiveGoalPage() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const profile = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false })
@@ -19,23 +27,28 @@ export function ActiveGoalPage() {
       void navigate('/login')
     },
   })
+  const diagnosticMutation = useMutation({
+    mutationFn: startDiagnostic,
+    onSuccess: (session) => {
+      queryClient.setQueryData(['assessment-session', session.id], session)
+      void navigate(`/assessment/diagnostic?session=${session.id}`)
+    },
+  })
 
   if (profile.error instanceof ApiError && profile.error.status === 401) {
     return <AuthRequired />
   }
   if (profile.isPending || goal.isPending)
-    return <Loading label="Calculating your optimal learning route…" />
+    return <Loading label={t('goal.loading')} />
   if (profile.error) return <ErrorNotice error={profile.error} />
   if (goal.error instanceof ApiError && goal.error.status === 404) {
     return (
       <section className="panel">
-        <p className="eyebrow">No active route</p>
-        <h1>No active goal yet</h1>
-        <p className="lede">
-          Your route starts after you set a destination and daily study budget.
-        </p>
+        <p className="eyebrow">{t('goal.noRoute')}</p>
+        <h1>{t('goal.noGoal')}</h1>
+        <p className="lede">{t('goal.noGoalDetail')}</p>
         <Link className="button-link" to="/goals/new">
-          Choose learning track
+          {t('goal.chooseTrack')}
         </Link>
       </section>
     )
@@ -48,10 +61,12 @@ export function ActiveGoalPage() {
     <section className="panel today-panel goal-summary">
       <div className="summary-heading">
         <div className="summary-heading-left">
-          <p className="eyebrow">Today Command Center</p>
-          <h1>Welcome, {profile.data?.displayName}</h1>
+          <p className="eyebrow">{t('goal.commandCenter')}</p>
+          <h1>
+            {t('goal.welcome', { name: profile.data?.displayName ?? '' })}
+          </h1>
           <p className="lede" style={{ margin: 0 }}>
-            Your route for Java Backend Internship readiness is calibrated.
+            {t('goal.routeReady')}
           </p>
         </div>
         <button
@@ -59,85 +74,102 @@ export function ActiveGoalPage() {
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
         >
-          {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
+          {logoutMutation.isPending ? t('goal.signingOut') : t('goal.signOut')}
         </button>
       </div>
 
-      {/* Today's High-Value Task Card */}
       <article className="today-task-card" aria-labelledby="today-task-title">
         <div className="task-card-header">
-          <span className="task-category">Phase 2 Preview • Core Milestone</span>
-          <span className="task-duration" aria-label={`Estimated duration ${dailyMinutes} minutes`}>
-            ⏱️ {dailyMinutes} mins allocated today
+          <span className="task-category">{t('goal.category')}</span>
+          <span
+            className="task-duration"
+            aria-label={t('goal.durationLabel', { minutes: dailyMinutes })}
+          >
+            {t('goal.allocated', { minutes: dailyMinutes })}
           </span>
         </div>
         <h2 id="today-task-title" className="task-title">
-          Java Backend: Knowledge Graph Diagnostic & Initial Assessment
+          {t('goal.diagnosticTitle')}
         </h2>
         <div className="task-rationale">
-          <strong>Why this task: </strong>
-          Initial diagnostic will produce concept-level evidence across Java syntax,
-          OOP polymorphism, and basic collection frameworks to tailor your daily plan.
+          <strong>{t('goal.why')} </strong>
+          {t('goal.rationale')}
         </div>
-        <div className="task-phases" aria-label="Task phases">
-          <span className="phase-chip">1. Diagnostic Quiz</span>
-          <span className="phase-chip">2. Knowledge Graph Mapping</span>
-          <span className="phase-chip">3. Adaptive Task Scheduler</span>
+        <div className="task-phases" aria-label={t('goal.category')}>
+          <span className="phase-chip">{t('goal.questions')}</span>
+          <span className="phase-chip">{t('goal.duration')}</span>
+          <span className="phase-chip">{t('goal.resumeSafe')}</span>
         </div>
+        {diagnosticMutation.error && (
+          <ErrorNotice error={diagnosticMutation.error} />
+        )}
         <div className="task-actions">
-          <button type="button" disabled style={{ opacity: 0.85, cursor: 'default' }}>
-            <span>Next Phase Starting Soon</span>
+          <button
+            type="button"
+            onClick={() => diagnosticMutation.mutate()}
+            disabled={diagnosticMutation.isPending}
+          >
+            <span>
+              {diagnosticMutation.isPending
+                ? t('goal.preparing')
+                : t('goal.start')}
+            </span>
           </button>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--sp-text-muted)' }}>
-            Phase 2 Knowledge Graph & Diagnostic are next in roadmap.
+          <span
+            style={{ fontSize: '0.8125rem', color: 'var(--sp-text-muted)' }}
+          >
+            {t('goal.retention')}
           </span>
+          <Link className="button-link button-secondary" to="/knowledge">
+            {t('knowledge.open')}
+          </Link>
         </div>
       </article>
 
-      {/* Goal Metadata */}
       <div>
-        <h3 style={{ fontSize: '0.875rem', color: 'var(--sp-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-          Active Goal Specifications
-        </h3>
+        <h3 className="metadata-heading">{t('goal.specifications')}</h3>
         <dl className="metadata-grid">
           <div>
-            <dt>Target Date</dt>
+            <dt>{t('goal.targetDate')}</dt>
             <dd>{goal.data?.targetDate}</dd>
           </div>
           <div>
-            <dt>Daily Budget</dt>
-            <dd>{goal.data?.defaultDailyMinutes} min / day</dd>
+            <dt>{t('goal.dailyBudget')}</dt>
+            <dd>
+              {t('goal.perDay', {
+                minutes: goal.data?.defaultDailyMinutes ?? dailyMinutes,
+              })}
+            </dd>
           </div>
           <div>
-            <dt>Timezone</dt>
+            <dt>{t('common.timezone')}</dt>
             <dd>{goal.data?.timezone}</dd>
           </div>
           <div>
-            <dt>Status</dt>
+            <dt>{t('goal.status')}</dt>
             <dd>
-              <span className="status-badge">
-                ● {goal.data?.status ?? 'ACTIVE'}
-              </span>
+              <span className="status-badge">● {t('goal.active')}</span>
             </dd>
           </div>
         </dl>
       </div>
 
       <p className="next-step-notice">
-        <strong>Next in Sequence:</strong> Phase 2 Knowledge Graph entities and relation validator will construct your visual prerequisite map.
+        <strong>{t('goal.milestone')}</strong> {t('goal.milestoneDetail')}
       </p>
     </section>
   )
 }
 
 function AuthRequired() {
+  const { t } = useI18n()
   return (
     <section className="panel auth-panel">
-      <p className="eyebrow">Session</p>
-      <h1>Session ended</h1>
-      <p className="lede">Sign in again to continue with your learning route.</p>
+      <p className="eyebrow">{t('auth.session')}</p>
+      <h1>{t('auth.ended')}</h1>
+      <p className="lede">{t('auth.endedDetail')}</p>
       <Link className="button-link" to="/login">
-        Sign in
+        {t('common.signIn')}
       </Link>
     </section>
   )

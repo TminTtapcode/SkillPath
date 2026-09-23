@@ -1,23 +1,35 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
 import { z } from 'zod'
 import { register as registerAccount } from '../../shared/api/client'
 import { ErrorNotice } from '../../shared/components/AsyncState'
+import { DEFAULT_TIMEZONE } from '../../shared/config/localization'
+import { useI18n } from '../../shared/i18n/I18n'
 
-const schema = z.object({
-  email: z.email('Enter a valid email address.'),
-  password: z.string().min(12, 'Use at least 12 characters.').max(128),
-  displayName: z.string().trim().min(1, 'Enter your name.').max(100),
-  timezone: z.string().min(1, 'Timezone is required.'),
-})
-
-type FormValues = z.infer<typeof schema>
+type FormValues = {
+  email: string
+  password: string
+  displayName: string
+  timezone: string
+}
 
 export function RegisterPage() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const schema = useMemo(
+    () =>
+      z.object({
+        email: z.email(t('validation.email')),
+        password: z.string().min(12, t('validation.passwordLength')).max(128),
+        displayName: z.string().trim().min(1, t('validation.name')).max(100),
+        timezone: z.string().min(1, t('validation.timezoneRequired')),
+      }),
+    [t],
+  )
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: 'onBlur',
@@ -25,7 +37,7 @@ export function RegisterPage() {
       email: '',
       password: '',
       displayName: '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      timezone: DEFAULT_TIMEZONE,
     },
   })
   const mutation = useMutation({
@@ -38,22 +50,24 @@ export function RegisterPage() {
 
   return (
     <section className="panel auth-panel">
-      <p className="eyebrow">Start your route</p>
-      <h1>Create account</h1>
-      <p className="lede">Tell us who you are. Your first goal comes next.</p>
+      <p className="eyebrow">{t('register.eyebrow')}</p>
+      <h1>{t('register.title')}</h1>
+      <p className="lede">{t('register.lede')}</p>
       {mutation.error && <ErrorNotice error={mutation.error} />}
       <form
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
         noValidate
       >
         <div className="form-group">
-          <label htmlFor="displayName">Display name</label>
+          <label htmlFor="displayName">{t('register.name')}</label>
           <input
             id="displayName"
             autoComplete="name"
             aria-invalid={Boolean(form.formState.errors.displayName)}
             aria-describedby={
-              form.formState.errors.displayName ? 'displayName-error' : undefined
+              form.formState.errors.displayName
+                ? 'displayName-error'
+                : undefined
             }
             {...form.register('displayName')}
           />
@@ -64,7 +78,7 @@ export function RegisterPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">{t('common.email')}</label>
           <input
             id="email"
             type="email"
@@ -82,7 +96,7 @@ export function RegisterPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t('common.password')}</label>
           <input
             id="password"
             type="password"
@@ -100,7 +114,7 @@ export function RegisterPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="timezone">Timezone</label>
+          <label htmlFor="timezone">{t('common.timezone')}</label>
           <input
             id="timezone"
             autoComplete="off"
@@ -121,11 +135,11 @@ export function RegisterPage() {
           disabled={mutation.isPending}
           className={mutation.isPending ? 'pending' : ''}
         >
-          {mutation.isPending ? 'Creating account…' : 'Create account'}
+          {mutation.isPending ? t('register.pending') : t('register.submit')}
         </button>
       </form>
       <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>
-        Already registered? <Link to="/login">Sign in</Link>
+        {t('register.existing')} <Link to="/login">{t('common.signIn')}</Link>
       </p>
     </section>
   )

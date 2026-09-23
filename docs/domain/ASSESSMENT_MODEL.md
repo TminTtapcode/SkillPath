@@ -4,6 +4,32 @@
 
 Assessment biến câu trả lời của user thành **concept evidence có cấu trúc**. Nó không trực tiếp gán mastery và không tự quyết định user đã hoàn thành prerequisite.
 
+### 1.1 Ranh giới thẩm quyền
+
+```text
+Diagnostic evidence is observational, not authoritative mastery.
+
+Evidence answers:
+"What did this attempt demonstrate?"
+
+Knowledge State answers:
+"What does the system currently estimate the learner knows?"
+
+Planner answers:
+"What should the learner do next?"
+```
+
+Đây là invariant bắt buộc của domain và giao diện:
+
+- Assessment chỉ ghi nhận điều attempt đã chứng minh theo question mapping, evaluator
+  và policy version.
+- Chỉ Knowledge State mới tổng hợp chuỗi evidence thành estimate về mastery và
+  confidence hiện tại.
+- Chỉ Planner mới quyết định hành động học tiếp theo từ graph, state, review và time
+  budget.
+- API/UI của diagnostic không được gọi score hoặc evidence của một attempt là
+  `mastery`, `readiness`, prerequisite đã hoàn thành, hay recommendation.
+
 ```mermaid
 flowchart LR
     Q[Question] --> A[Answer Attempt]
@@ -105,6 +131,25 @@ Lưu `user_id`, `goal_id`, `purpose`, `status`, `started_at`, `completed_at`, `g
 
 `score = earned_points / total_points`.
 
+Phase 3 policy `assessment-objective-v1` makes this concrete:
+
+```text
+SINGLE_CHOICE:
+  score = 1 when the selected option exactly matches the answer key, otherwise 0
+
+MULTIPLE_CHOICE:
+  score = clamp(
+      (correctSelections - incorrectSelections) / correctOptionCount,
+      0,
+      1
+  )
+```
+
+Calculations use `BigDecimal`, scale 4, `HALF_UP`. Objective questions emit only
+`RECOGNITION` or `UNDERSTANDING`. Evidence reliability is capped by the mapping and
+multiplied by its concept weight; objective evaluation cannot emit `RECALL` or
+`APPLICATION` regardless of client input.
+
 Đoán đúng MCQ không được tạo evidence mạnh bằng application. Reliability mặc định:
 
 | Nguồn | Reliability mặc định |
@@ -171,6 +216,19 @@ GET  /api/v1/assessments/{sessionId}/result
 ```
 
 Submit cần `Idempotency-Key`. Client không được gửi `user_id` thay cho identity từ access token/session.
+
+Phase 3 implements this API with one completed diagnostic baseline per goal, an
+in-progress session lifetime of seven days, immutable pinned question versions, and
+eight project-authored Java Backend questions. Leaving the UI preserves the session;
+expiry is evaluated from server time.
+
+### Localized presentation
+
+English question text and options are canonical. Vietnamese prompt/option overlays are
+read using the same immutable question version and must retain the exact canonical option
+ID set. Locale is excluded from answer canonicalization, idempotency hashes, scoring,
+evidence, and outbox payloads. Switching language during a diagnostic therefore changes
+only presentation and cannot advance or mutate the session.
 
 ## 9. Acceptance criteria
 

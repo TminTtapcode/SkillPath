@@ -34,6 +34,7 @@ class KnowledgeMigrationUpgradeIT {
         Flyway phaseTwo = Flyway.configure()
                 .dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("7"))
                 .load();
         assertThat(phaseTwo.migrate().targetSchemaVersion).isEqualTo("7");
 

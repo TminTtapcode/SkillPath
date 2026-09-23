@@ -43,13 +43,31 @@ Exit: versioned acyclic goal graph can be published and queried.
 
 ## Phase 3 — Assessment
 
+Status: completed locally on 2026-09-23; implementation and validation evidence are in
+`PHASE_3_ASSESSMENT.md`.
+
 - Questions/mappings/session/attempts.
 - Objective evaluation and evidence contract.
 - Diagnostic journey; AI adapter stub only if needed.
 
 Exit: diagnostic produces concept-level evidence exactly once.
 
+### Cross-cutting localization milestone L10
+
+Status: completed locally on 2026-09-23; implementation and validation evidence are in
+`LOCALIZATION_V1.md`.
+
+- Vietnamese/English interface and canonical learner content overlays.
+- Browser-persisted language choice using `Accept-Language`/`Content-Language`.
+- Ho Chi Minh City timezone default for new registration and goal forms.
+
+Exit: the current learner journey works in both languages without changing domain IDs,
+diagnostic progress, scoring, or evidence.
+
 ## Phase 4 — Progress and review
+
+Status: completed locally on 2026-09-23; implementation and validation evidence are in
+`PHASE_4_PROGRESS_REVIEW.md`.
 
 - Evidence ledger, state projection, mastery/confidence.
 - Misconceptions, decay, review schedule, replay/rebuild.
@@ -58,6 +76,9 @@ Exit: diagnostic produces concept-level evidence exactly once.
 Exit: deterministic projection passes replay fixtures.
 
 ## Phase 5 — Learning system
+
+Status: discover/design drafted on 2026-09-23 in
+`PHASE_5_LEARNING_SYSTEM.md`; owner approval is required before implementation.
 
 - Curated resources, templates/variants, assignments, lifecycle.
 - Today task UI and completion flow.

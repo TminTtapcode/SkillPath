@@ -228,6 +228,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assessments/diagnostic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startDiagnostic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assessments/{sessionId}/next-question": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNextDiagnosticQuestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assessments/{sessionId}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitDiagnosticAttempt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assessments/{sessionId}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDiagnosticResult"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyKnowledgeState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/me/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyKnowledgeState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/me/{nodeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyKnowledgeEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDueReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/progress/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rebuildProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -353,6 +497,84 @@ export interface components {
             publishedAt: string;
             replayed: boolean;
         };
+        AssessmentSessionResponse: {
+            id: string;
+            goalId: string;
+            graphVersionId: string;
+            assessmentPolicyVersion: string;
+            /** @enum {string} */
+            status: "IN_PROGRESS" | "COMPLETED" | "EXPIRED";
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            answeredQuestions: number;
+            totalQuestions: number;
+            created: boolean;
+            resumed: boolean;
+        };
+        AssessmentQuestionOption: {
+            id: string;
+            label: string;
+        };
+        AssessmentQuestionResponse: {
+            sessionId: string;
+            sessionQuestionId: string;
+            questionVersionId: string;
+            /** @enum {string} */
+            type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
+            prompt: string;
+            difficulty: number;
+            estimatedSeconds: number;
+            position: number;
+            totalQuestions: number;
+            /** Format: date-time */
+            expiresAt: string;
+            options: components["schemas"]["AssessmentQuestionOption"][];
+        };
+        SubmitAssessmentAttemptRequest: {
+            sessionQuestionId: string;
+            selectedOptionIds: string[];
+            selfConfidence?: number | null;
+            timeSpentSeconds: number;
+        };
+        AssessmentAttemptResponse: {
+            attemptId: string;
+            /** @enum {string} */
+            sessionStatus: "IN_PROGRESS" | "COMPLETED" | "EXPIRED";
+            replayed: boolean;
+        };
+        /** @description Observational evidence from one evaluated attempt; not authoritative mastery. */
+        AssessmentEvidenceResponse: {
+            evidenceId: string;
+            attemptId: string;
+            knowledgeNodeId: string;
+            knowledgeNodeSlug: string;
+            knowledgeNodeName: string;
+            /** @enum {string} */
+            dimension: "RECOGNITION" | "UNDERSTANDING";
+            score: number;
+            reliability: number;
+            evaluatorVersion: string;
+            /** Format: date-time */
+            observedAt: string;
+        };
+        AssessmentResultResponse: {
+            sessionId: string;
+            graphVersionId: string;
+            assessmentPolicyVersion: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: string;
+            answeredQuestions: number;
+            totalQuestions: number;
+            overallObjectiveScore: number;
+            evidence: components["schemas"]["AssessmentEvidenceResponse"][];
+            interpretation: string;
+        };
         FieldError: {
             field: string;
             code: string;
@@ -368,6 +590,69 @@ export interface components {
             correlationId: string;
             fieldErrors: components["schemas"]["FieldError"][];
         };
+        KnowledgeStateResponse: {
+            knowledgeNodeId: string;
+            knowledgeNodeSlug: string;
+            knowledgeNodeName: string;
+            graphVersionId: string;
+            recognition: number;
+            understanding: number;
+            recall: number;
+            application: number;
+            storedMastery: number;
+            effectiveMastery: number;
+            confidence: number;
+            evidenceCount: number;
+            /** Format: date-time */
+            lastEvidenceAt?: string;
+            /** Format: date-time */
+            nextReviewAt?: string;
+            /** @enum {string} */
+            status: "UNKNOWN" | "LEARNING" | "PROVISIONAL" | "MASTERED" | "REVIEW_DUE";
+            policyVersion: string;
+        };
+        KnowledgeStatePageResponse: {
+            items: components["schemas"]["KnowledgeStateResponse"][];
+            hasMore: boolean;
+            nextCursor?: string;
+        };
+        KnowledgeEvidenceResponse: {
+            evidenceId: string;
+            sourceType: string;
+            sourceId: string;
+            /** @enum {string} */
+            dimension: "RECOGNITION" | "UNDERSTANDING" | "RECALL" | "APPLICATION";
+            score: number;
+            reliability: number;
+            policyVersion: string;
+            /** Format: date-time */
+            observedAt: string;
+        };
+        KnowledgeEvidencePageResponse: {
+            items: components["schemas"]["KnowledgeEvidenceResponse"][];
+            hasMore: boolean;
+            nextCursor?: string;
+        };
+        ReviewResponse: {
+            reviewScheduleId: string;
+            knowledgeNodeId: string;
+            knowledgeNodeSlug: string;
+            knowledgeNodeName: string;
+            intervalIndex: number;
+            /** Format: date-time */
+            dueAt: string;
+            policyVersion: string;
+        };
+        ReviewPageResponse: {
+            items: components["schemas"]["ReviewResponse"][];
+            hasMore: boolean;
+            nextCursor?: string;
+        };
+        ProgressRebuildResponse: {
+            /** @enum {string} */
+            status: "COMPLETED";
+            projectedNodes: number;
+        };
     };
     responses: {
         /** @description Request failed. */
@@ -381,15 +666,21 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+        AcceptLanguage: "vi-VN" | "en";
         CsrfHeader: string;
         GoalTemplateId: string;
         NodeId: string;
         VersionId: string;
+        AssessmentSessionId: string;
         Transitive: boolean;
         GraphLimit: number;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Resolved language used for localized learner content. */
+        ContentLanguage: "vi-VN" | "en";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -513,7 +804,10 @@ export interface operations {
     listGoalTemplates: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -522,6 +816,7 @@ export interface operations {
             /** @description Active goal templates. */
             200: {
                 headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -538,7 +833,10 @@ export interface operations {
                 limit?: number;
                 cursor?: string;
             };
-            header?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
             path: {
                 goalTemplateId: components["parameters"]["GoalTemplateId"];
             };
@@ -549,6 +847,7 @@ export interface operations {
             /** @description Current published graph for the active goal template. */
             200: {
                 headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -562,7 +861,10 @@ export interface operations {
     getPublishedKnowledgeNode: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
             path: {
                 nodeId: components["parameters"]["NodeId"];
             };
@@ -573,6 +875,7 @@ export interface operations {
             /** @description A node in a published graph. */
             200: {
                 headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -588,7 +891,10 @@ export interface operations {
                 transitive?: components["parameters"]["Transitive"];
                 limit?: components["parameters"]["GraphLimit"];
             };
-            header?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
             path: {
                 nodeId: components["parameters"]["NodeId"];
             };
@@ -599,6 +905,7 @@ export interface operations {
             /** @description Stable direct or transitive prerequisite nodes. */
             200: {
                 headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -613,7 +920,10 @@ export interface operations {
                 transitive?: components["parameters"]["Transitive"];
                 limit?: components["parameters"]["GraphLimit"];
             };
-            header?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
             path: {
                 nodeId: components["parameters"]["NodeId"];
             };
@@ -624,6 +934,7 @@ export interface operations {
             /** @description Stable direct or transitive dependent nodes. */
             200: {
                 headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -745,6 +1056,269 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+        };
+    };
+    startDiagnostic: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing in-progress or completed diagnostic returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentSessionResponse"];
+                };
+            };
+            /** @description New diagnostic session created with pinned question versions. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentSessionResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getNextDiagnosticQuestion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                sessionId: components["parameters"]["AssessmentSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Next pinned unanswered question. The answer key is never included. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentQuestionResponse"];
+                };
+            };
+            /** @description Diagnostic is completed and has no next question. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
+        };
+    };
+    submitDiagnosticAttempt: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": string;
+            };
+            path: {
+                sessionId: components["parameters"]["AssessmentSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitAssessmentAttemptRequest"];
+            };
+        };
+        responses: {
+            /** @description Original accepted attempt replayed for the same key and payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentAttemptResponse"];
+                };
+            };
+            /** @description Attempt, concept evidence, and durable handoff created atomically. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentAttemptResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getDiagnosticResult: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                sessionId: components["parameters"]["AssessmentSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Observational concept evidence, not authoritative mastery or a recommendation. */
+            200: {
+                headers: {
+                    "Content-Language": components["headers"]["ContentLanguage"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentResultResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listMyKnowledgeState: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Learner-owned effective knowledge-state page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeStatePageResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+        };
+    };
+    getMyKnowledgeState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Learner-owned knowledge state for one concept. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeStateResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    listMyKnowledgeEvidence: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only evidence provenance page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeEvidencePageResponse"];
+                };
+            };
+        };
+    };
+    listDueReviews: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reviews due at the server clock for the current learner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewPageResponse"];
+                };
+            };
+        };
+    };
+    rebuildProgress: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deterministic replay completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressRebuildResponse"];
+                };
+            };
+            403: components["responses"]["Problem"];
         };
     };
 }

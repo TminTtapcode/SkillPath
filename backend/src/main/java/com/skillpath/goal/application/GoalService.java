@@ -4,6 +4,7 @@ import com.skillpath.goal.application.IdempotencyStore.Claim;
 import com.skillpath.goal.domain.GoalTemplate;
 import com.skillpath.goal.domain.UserGoal;
 import com.skillpath.shared.api.ApiException;
+import com.skillpath.shared.localization.SupportedLocale;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class GoalService {
+public class GoalService implements GoalQueries {
 
     private static final Pattern IDEMPOTENCY_KEY = Pattern.compile("[A-Za-z0-9._:-]{1,128}");
     private static final String CREATE_OPERATION = "CREATE_GOAL";
@@ -45,14 +46,30 @@ public class GoalService {
     }
 
     @Transactional(readOnly = true)
-    public List<GoalTemplate> listTemplates() {
-        return goalStore.findActiveTemplates();
+    public List<GoalTemplate> listTemplates(SupportedLocale locale) {
+        return goalStore.findActiveTemplates(locale);
     }
 
     @Transactional(readOnly = true)
     public UserGoal activeGoal(long userId) {
         return goalStore.findActiveByUserId(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACTIVE_GOAL_NOT_FOUND", "No active goal exists."));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ActiveGoalView activeGoalForUser(long userId) {
+        UserGoal goal = activeGoal(userId);
+        return new ActiveGoalView(goal.id(), goal.goalTemplateId(), goal.status().name());
+    }
+
+    @Override
+    @Transactional
+    public ActiveGoalView lockActiveGoalForUser(long userId) {
+        UserGoal goal = goalStore.findActiveByUserIdForUpdate(userId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "ACTIVE_GOAL_NOT_FOUND", "No active goal exists."));
+        return new ActiveGoalView(goal.id(), goal.goalTemplateId(), goal.status().name());
     }
 
     @Transactional

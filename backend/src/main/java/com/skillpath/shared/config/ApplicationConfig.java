@@ -19,6 +19,6 @@ public class ApplicationConfig {
         return new OpenAPI().info(new Info()
                 .title("SkillPath API")
                 .version("v1")
-                .description("Phase 1 authentication, profile, and goal contracts."));
+                .description("SkillPath identity, goal, knowledge graph, and diagnostic assessment contracts."));
     }
 }

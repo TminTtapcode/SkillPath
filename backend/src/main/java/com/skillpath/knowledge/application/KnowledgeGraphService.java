@@ -8,6 +8,7 @@ import com.skillpath.knowledge.domain.GraphValidator;
 import com.skillpath.knowledge.domain.KnowledgeNode;
 import com.skillpath.knowledge.domain.KnowledgeRelation;
 import com.skillpath.shared.api.ApiException;
+import com.skillpath.shared.localization.SupportedLocale;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class KnowledgeGraphService implements KnowledgeGraphQueries {
+public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentKnowledgeQueries {
 
     private static final int MAX_LIMIT = 200;
     private static final int MAX_DEPTH = 10;
@@ -45,26 +46,48 @@ public class KnowledgeGraphService implements KnowledgeGraphQueries {
 
     @Transactional(readOnly = true)
     public NodeView node(long nodeId) {
+        return node(nodeId, SupportedLocale.ENGLISH);
+    }
+
+    @Transactional(readOnly = true)
+    public NodeView node(long nodeId, SupportedLocale locale) {
         GraphSnapshot graph = publishedByNode(nodeId);
         KnowledgeNode node = graph.nodes().stream()
                 .filter(candidate -> candidate.id() == nodeId)
                 .findFirst()
                 .orElseThrow(() -> notFound("KNOWLEDGE_NODE_NOT_FOUND", "Knowledge node was not found."));
-        return NodeView.from(node, graph.version().id());
+        return NodeView.from(localize(node, translations(graph, locale)), graph.version().id());
     }
 
     @Transactional(readOnly = true)
     public List<NodeView> prerequisites(long nodeId, boolean transitive, int limit, boolean dependents) {
+        return prerequisites(nodeId, transitive, limit, dependents, SupportedLocale.ENGLISH);
+    }
+
+    @Transactional(readOnly = true)
+    public List<NodeView> prerequisites(
+            long nodeId,
+            boolean transitive,
+            int limit,
+            boolean dependents,
+            SupportedLocale locale) {
         validateBounds(0, limit);
         GraphSnapshot graph = publishedByNode(nodeId);
+        Map<Long, KnowledgeGraphStore.NodeTranslation> translations = translations(graph, locale);
         return GraphAlgorithms.traverse(graph, nodeId, !dependents, transitive, limit).stream()
-                .map(node -> NodeView.from(node, graph.version().id()))
+                .map(node -> NodeView.from(localize(node, translations), graph.version().id()))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public GoalGraphView goalGraph(long goalTemplateId, Long anchorNodeId, int depth, int limit, String cursor) {
+    public GoalGraphView goalGraph(
+            long goalTemplateId,
+            Long anchorNodeId,
+            int depth,
+            int limit,
+            String cursor,
+            SupportedLocale locale) {
         validateBounds(depth, limit);
         GraphSnapshot graph = store.findPublishedByGoalTemplate(goalTemplateId)
                 .orElseThrow(() -> notFound("PUBLISHED_GOAL_GRAPH_NOT_FOUND", "Published goal graph was not found."));
@@ -83,13 +106,14 @@ public class KnowledgeGraphService implements KnowledgeGraphQueries {
         }
         int end = Math.min(offset + limit, candidates.size());
         List<KnowledgeNode> page = candidates.subList(offset, end);
+        Map<Long, KnowledgeGraphStore.NodeTranslation> translations = translations(graph, locale);
         Set<Long> pageIds = page.stream().map(KnowledgeNode::id).collect(java.util.stream.Collectors.toSet());
         List<EdgeView> edges = graph.relations().stream()
                 .filter(edge -> pageIds.contains(edge.sourceNodeId()) && pageIds.contains(edge.targetNodeId()))
                 .map(EdgeView::from)
                 .toList();
         List<GoalNodeView> nodes = page.stream()
-                .map(node -> GoalNodeView.from(node, mappings.get(node.id())))
+                .map(node -> GoalNodeView.from(localize(node, translations), mappings.get(node.id())))
                 .toList();
         String nextCursor = end < candidates.size() ? encodeCursor(graph.version().id(), end) : null;
         return new GoalGraphView(
@@ -101,6 +125,65 @@ public class KnowledgeGraphService implements KnowledgeGraphQueries {
                 edges,
                 nextCursor != null,
                 nextCursor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AssessmentGraph publishedAssessmentGraph(long goalTemplateId) {
+        GraphSnapshot graph = store.findPublishedByGoalTemplate(goalTemplateId)
+                .orElseThrow(() -> notFound(
+                        "PUBLISHED_GOAL_GRAPH_NOT_FOUND", "Published goal graph was not found."));
+        Set<Long> memberIds = graph.goalKnowledge().stream()
+                .filter(mapping -> mapping.goalTemplateId() == goalTemplateId)
+                .map(GoalKnowledge::knowledgeNodeId)
+                .collect(java.util.stream.Collectors.toSet());
+        List<NodeSummary> nodes = graph.nodes().stream()
+                .filter(node -> memberIds.contains(node.id()))
+                .sorted(NODE_ORDER)
+                .map(node -> new NodeSummary(node.id(), node.slug(), node.name()))
+                .toList();
+        return new AssessmentGraph(graph.version().id(), graph.version().curriculumKey(), nodes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NodeSummary> nodeSummaries(
+            long graphVersionId, Set<Long> nodeIds, SupportedLocale locale) {
+        GraphSnapshot graph = store.findVersion(graphVersionId)
+                .orElseThrow(() -> notFound("GRAPH_VERSION_NOT_FOUND", "Graph version was not found."));
+        Map<Long, KnowledgeGraphStore.NodeTranslation> translations = translations(graph, locale);
+        return graph.nodes().stream()
+                .filter(node -> nodeIds.contains(node.id()))
+                .sorted(NODE_ORDER)
+                .map(node -> localize(node, translations))
+                .map(node -> new NodeSummary(node.id(), node.slug(), node.name()))
+                .toList();
+    }
+
+    private Map<Long, KnowledgeGraphStore.NodeTranslation> translations(
+            GraphSnapshot graph, SupportedLocale locale) {
+        if (!locale.requiresTranslation()) {
+            return Map.of();
+        }
+        return store.findNodeTranslations(graph.version().id(), locale.tag());
+    }
+
+    private KnowledgeNode localize(
+            KnowledgeNode node, Map<Long, KnowledgeGraphStore.NodeTranslation> translations) {
+        KnowledgeGraphStore.NodeTranslation translation = translations.get(node.id());
+        if (translation == null) {
+            return node;
+        }
+        return new KnowledgeNode(
+                node.id(),
+                node.graphVersionId(),
+                node.slug(),
+                translation.name(),
+                translation.description(),
+                node.category(),
+                node.difficulty(),
+                node.estimatedMinutes(),
+                node.status());
     }
 
     @Transactional

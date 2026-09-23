@@ -29,8 +29,13 @@ the same public contracts.
 ```mermaid
 flowchart TD
     GOAL[goal] --> K[knowledge contract]
+    AS --> GOAL[goal contract]
     AS[assessment] --> K
     AS --> PR[progress contract]
+    AS --> OB[shared outbox]
+    OB --> PR
+    PR --> OB
+    OB --> RV[review]
     PL[planner] --> K
     PL --> PR
     PL --> L[learning contract]
@@ -46,6 +51,12 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
 - A module may query another only through its published interface.
 - A module owns validation of its invariants and tables.
 - Goal-template mappings in `knowledge` reference module-neutral goal-template IDs; `knowledge` does not import goal persistence entities.
+- Assessment resolves the learner's active goal through `goal.application.GoalQueries`
+  and the compatible graph/node allowlist through
+  `knowledge.application.AssessmentKnowledgeQueries`; it never imports either module's
+  persistence types. The goal contract also provides a narrow pessimistic-lock operation
+  so concurrent diagnostic starts serialize on the owned active goal before assessment
+  enforces its unique session invariant.
 - The goal-owned HTTP adapter for `/goal-templates/{id}/graph` delegates to the public
   `knowledge.application.KnowledgeGraphQueries` contract. This realizes `goal ->
   knowledge` without a reverse runtime dependency; the knowledge-owned mapping uses a
@@ -53,6 +64,12 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
 - `review` alone advances review intervals. `progress` may expose `nextReviewAt` only as a derived snapshot received through the review contract.
 - Cross-module database joins are avoided in domain writes; dedicated read models may join through controlled query adapters.
 - Events are past tense facts, versioned, and idempotently consumed.
+- The shared local outbox owns delivery mechanics only (lease, retry, terminal failure).
+  `progress` owns evidence interpretation/projection and `review` owns intervals;
+  handlers allowlist exact owner/type/version tuples.
+- Locale is request-scoped presentation context. `goal`, `knowledge`, and `assessment`
+  overlay only their owned translated text; locale never enters scoring, evidence,
+  authorization, planner inputs, or another module's persistence model.
 
 ## Example
 
@@ -66,3 +83,4 @@ Use ArchUnit to enforce module/layer imports. At minimum test:
 - no external module importing `.infrastructure.persistence`;
 - domain packages depend only on allowed JDK/domain types;
 - AI adapter cannot import progress repositories.
+- code outside assessment persistence cannot import assessment persistence types.

@@ -20,9 +20,9 @@
   --sp-border-focus: #2563eb;
 
   /* --- Text & Contrast --- */
-  --sp-text-primary: #0f172a;       /* 15.8:1 on white */
-  --sp-text-secondary: #334155;     /* 9.2:1 on white */
-  --sp-text-muted: #64748b;         /* 4.6:1 on white (WCAG AA) */
+  --sp-text-primary: #0f172a; /* 15.8:1 on white */
+  --sp-text-secondary: #334155; /* 9.2:1 on white */
+  --sp-text-muted: #64748b; /* 4.6:1 on white (WCAG AA) */
   --sp-text-disabled: #94a3b8;
   --sp-text-inverse: #ffffff;
 
@@ -67,27 +67,29 @@
   --sp-code-border: #334155;
 
   /* --- Typography Scale --- */
-  --sp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --sp-font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    sans-serif;
   --sp-font-mono: 'JetBrains Mono', 'Consolas', monospace;
 
-  --sp-text-xs: 0.75rem;    /* 12px */
-  --sp-text-sm: 0.875rem;   /* 14px */
-  --sp-text-base: 1rem;     /* 16px */
-  --sp-text-md: 1.125rem;   /* 18px */
-  --sp-text-lg: 1.25rem;    /* 20px */
-  --sp-text-xl: 1.5rem;     /* 24px */
-  --sp-text-2xl: 1.875rem;  /* 30px */
+  --sp-text-xs: 0.75rem; /* 12px */
+  --sp-text-sm: 0.875rem; /* 14px */
+  --sp-text-base: 1rem; /* 16px */
+  --sp-text-md: 1.125rem; /* 18px */
+  --sp-text-lg: 1.25rem; /* 20px */
+  --sp-text-xl: 1.5rem; /* 24px */
+  --sp-text-2xl: 1.875rem; /* 30px */
 
   /* --- Spacing System (8pt Grid) --- */
-  --sp-space-1: 0.25rem;    /* 4px */
-  --sp-space-2: 0.5rem;     /* 8px */
-  --sp-space-3: 0.75rem;    /* 12px */
-  --sp-space-4: 1rem;       /* 16px */
-  --sp-space-5: 1.25rem;    /* 20px */
-  --sp-space-6: 1.5rem;     /* 24px */
-  --sp-space-8: 2rem;       /* 32px */
-  --sp-space-10: 2.5rem;    /* 40px */
-  --sp-space-12: 3rem;      /* 48px */
+  --sp-space-1: 0.25rem; /* 4px */
+  --sp-space-2: 0.5rem; /* 8px */
+  --sp-space-3: 0.75rem; /* 12px */
+  --sp-space-4: 1rem; /* 16px */
+  --sp-space-5: 1.25rem; /* 20px */
+  --sp-space-6: 1.5rem; /* 24px */
+  --sp-space-8: 2rem; /* 32px */
+  --sp-space-10: 2.5rem; /* 40px */
+  --sp-space-12: 3rem; /* 48px */
 
   /* --- Radii --- */
   --sp-radius-sm: 4px;
@@ -98,8 +100,10 @@
 
   /* --- Shadows (Ambient depth) --- */
   --sp-shadow-subtle: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --sp-shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-  --sp-shadow-elevated: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --sp-shadow-card:
+    0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --sp-shadow-elevated:
+    0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
 }
 
 /* ==========================================================================
@@ -228,6 +232,24 @@ a:focus-visible {
   align-items: center;
   gap: var(--sp-space-4);
   color: var(--sp-text-muted);
+  font-size: var(--sp-text-sm);
+}
+
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-xs);
+  font-weight: 600;
+}
+
+.language-selector select {
+  width: auto;
+  min-width: 7.5rem;
+  padding: 0.35rem 1.75rem 0.35rem 0.55rem;
+  border-color: var(--sp-border-strong);
+  background-color: var(--sp-surface-card);
   font-size: var(--sp-text-sm);
 }
 
@@ -363,7 +385,9 @@ select {
   color: var(--sp-text-primary);
   background-color: var(--sp-surface-card);
   font-size: var(--sp-text-base); /* 16px prevents iOS Safari auto-zoom */
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 input:hover,
@@ -484,7 +508,10 @@ button,
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease;
 }
 
 button:hover,
@@ -684,6 +711,14 @@ dl.metadata-grid {
   margin: 0;
 }
 
+.metadata-heading {
+  margin-bottom: var(--sp-space-3);
+  color: var(--sp-text-muted);
+  font-size: var(--sp-text-sm);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 dl.metadata-grid div {
   padding: var(--sp-space-4);
   border-radius: var(--sp-radius-md);
@@ -728,6 +763,254 @@ dd {
   font-size: var(--sp-text-sm);
 }
 
+/* ============================================================================
+   Diagnostic Assessment
+   ========================================================================== */
+
+.diagnostic-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-5);
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.diagnostic-progress-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-space-4);
+}
+
+.diagnostic-progress-row h1 {
+  margin-bottom: 0;
+}
+
+.diagnostic-time {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-text-muted);
+  font-family: var(--sp-font-mono);
+  font-size: var(--sp-text-xs);
+}
+
+.diagnostic-progress-track {
+  width: 100%;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--sp-radius-full);
+  background: var(--sp-surface-subtle);
+  border: 1px solid var(--sp-border-subtle);
+}
+
+.diagnostic-progress-track span {
+  display: block;
+  height: 100%;
+  background: var(--sp-primary);
+  transition: width 180ms ease;
+}
+
+.diagnostic-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.diagnostic-fieldset legend {
+  max-width: 66ch;
+  padding: 0;
+  color: var(--sp-text-primary);
+  font-size: var(--sp-text-lg);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.diagnostic-instruction {
+  margin: var(--sp-space-2) 0 var(--sp-space-4);
+  color: var(--sp-text-muted);
+  font-size: var(--sp-text-sm);
+}
+
+.diagnostic-options {
+  display: grid;
+  gap: var(--sp-space-3);
+}
+
+.diagnostic-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-space-3);
+  min-height: 52px;
+  padding: var(--sp-space-4);
+  border: 1px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-card);
+  color: var(--sp-text-primary);
+  cursor: pointer;
+}
+
+.diagnostic-option:hover,
+.diagnostic-option.selected {
+  border-color: var(--sp-primary);
+  background: #eff6ff;
+}
+
+.diagnostic-option:focus-within {
+  outline: 3px solid #bfdbfe;
+  outline-offset: 2px;
+}
+
+.diagnostic-option input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--sp-primary);
+}
+
+.diagnostic-confidence {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin-top: var(--sp-space-5);
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-sm);
+  font-weight: 600;
+}
+
+.diagnostic-confidence select {
+  max-width: 280px;
+}
+
+.diagnostic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-space-3);
+  margin-top: var(--sp-space-5);
+}
+
+.diagnostic-boundary-note {
+  margin: 0;
+  padding: var(--sp-space-3) var(--sp-space-4);
+  border-left: 3px solid var(--sp-border-strong);
+  color: var(--sp-text-muted);
+  font-size: var(--sp-text-xs);
+  line-height: 1.5;
+}
+
+.diagnostic-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-space-1) var(--sp-space-4);
+  padding: var(--sp-space-5);
+  border: 1px solid var(--sp-border-default);
+  border-left: 4px solid var(--sp-primary);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-surface-subtle);
+}
+
+.diagnostic-score span {
+  color: var(--sp-text-secondary);
+  font-weight: 600;
+}
+
+.diagnostic-score strong {
+  grid-row: span 2;
+  font-family: var(--sp-font-mono);
+  font-size: var(--sp-text-xl);
+}
+
+.diagnostic-score small {
+  color: var(--sp-text-muted);
+}
+
+.diagnostic-evidence-heading {
+  margin: 0;
+  font-size: var(--sp-text-md);
+}
+
+.diagnostic-evidence-list {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagnostic-evidence-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-4);
+  padding: var(--sp-space-3) var(--sp-space-4);
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-sm);
+}
+
+.diagnostic-evidence-list li div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.diagnostic-evidence-list li span {
+  color: var(--sp-text-muted);
+  font-size: var(--sp-text-xs);
+}
+
+.diagnostic-observation {
+  flex: 0 0 auto;
+  font-family: var(--sp-font-mono);
+}
+.knowledge-panel {
+  display: grid;
+  gap: var(--sp-space-5);
+}
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--sp-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.knowledge-grid li {
+  display: grid;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-4);
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface-subtle);
+}
+.knowledge-card-heading,
+.knowledge-numbers {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-space-2);
+}
+.knowledge-card-heading span {
+  color: var(--sp-primary);
+  font-size: var(--sp-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.knowledge-meter {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sp-border-subtle);
+}
+.knowledge-meter span {
+  display: block;
+  height: 100%;
+  background: var(--sp-primary);
+}
+.knowledge-numbers,
+.knowledge-grid small {
+  color: var(--sp-text-muted);
+  font-size: var(--sp-text-xs);
+}
+
 /* ==========================================================================
    Responsive & Accessibility
    ========================================================================== */
@@ -737,8 +1020,14 @@ dd {
     width: calc(100% - 1.5rem);
   }
 
-  .header-status {
+  .header-status > span,
+  .language-selector > span,
+  .brand-badge {
     display: none;
+  }
+
+  .language-selector select {
+    min-width: 6.75rem;
   }
 
   .panel {
@@ -757,6 +1046,18 @@ dd {
   .task-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .diagnostic-progress-row,
+  .diagnostic-actions,
+  .diagnostic-evidence-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .diagnostic-actions .button-link,
+  .diagnostic-actions button {
+    width: 100%;
   }
 
   .minute-pill-group {

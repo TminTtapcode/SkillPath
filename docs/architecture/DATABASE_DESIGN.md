@@ -18,6 +18,7 @@
 | Goals | `goal_templates`, `user_goals` |
 | Knowledge | `knowledge_graph_versions`, `knowledge_nodes`, `knowledge_relations`, `goal_knowledge` |
 | Assessment | `questions`, `question_versions`, `question_knowledge`, `assessment_sessions`, `answer_attempts`, `attempt_evidence` |
+| Localization overlays | `goal_template_translations`, `knowledge_node_translations`, `question_version_translations` |
 | Progress | `knowledge_evidence`, `user_knowledge`, `user_misconceptions` |
 | Learning | `resources`, `knowledge_resources`, `task_templates`, `task_template_knowledge`, `learning_tasks`, `learning_sessions` |
 | Planner | `planner_policies`, `planning_snapshots`, `planner_decisions`, `planner_decision_candidates`, `daily_plans`, `daily_plan_items` |
@@ -28,8 +29,12 @@ Phase 1 physically implements `users`, `user_credentials`, `user_roles`,
 `SPRING_SESSION`, `SPRING_SESSION_ATTRIBUTES`, `goal_templates`, `user_goals`, and
 `idempotency_records`. Phase 2 physically implements `knowledge_graph_versions`,
 `knowledge_nodes`, `knowledge_relations`, `goal_knowledge`, and the append-only
-`knowledge_version_events` lifecycle audit. Later table groups remain logical design
-only.
+`knowledge_version_events` lifecycle audit. Phase 3 physically implements `questions`,
+`question_versions`, `question_knowledge`, `assessment_sessions`,
+`assessment_session_questions`, `answer_attempts`, `attempt_evidence`, and the generic
+`outbox_events` reliability envelope. V10/V11 add Vietnamese presentation overlays for
+the canonical goal template, 17 knowledge nodes, and eight question versions. Later
+table groups remain logical design only.
 
 Flyway history at the Phase 1 boundary:
 
@@ -42,6 +47,12 @@ Flyway history at the Phase 1 boundary:
 | V5 | Rename draft `auth_*` tables to authoritative `user_credentials`/`user_roles` names |
 | V6 | Versioned knowledge graph, goal mapping, publication uniqueness, and lifecycle audit |
 | V7 | Canonical project-authored Java Backend v1 graph and goal mapping |
+| V8 | Versioned assessment questions, pinned sessions, attempts, evidence, and outbox |
+| V9 | Canonical project-authored Java Backend objective diagnostic |
+| V10 | Version-owned goal, knowledge-node, and question presentation translations |
+| V11 | Project-authored Vietnamese goal, graph, and diagnostic content |
+| V12 | Outbox leases/retries plus append-only progress evidence and deterministic projection |
+| V13 | Review schedule/attempt schema and allowlisted misconception definitions |
 
 V4 and V5 intentionally demonstrate the forward-fix rule: an applied migration was
 not rewritten after integration validation exposed a mismatch/context conflict.
@@ -91,6 +102,19 @@ enforce one published version per curriculum. Relation endpoint composite foreig
 enforce same-version edges. Runtime publication locks all versions of the curriculum,
 flushes retirement before publication to satisfy the generated unique key, and keeps
 retirement, publication, and audit in one transaction.
+
+Phase 3 uses generated nullable goal IDs to enforce at most one active diagnostic and
+one completed diagnostic baseline per goal. Session questions snapshot immutable
+question versions. Unique attempt idempotency and session-question keys, unique
+attempt-evidence source keys, and unique outbox event keys form layered duplicate
+protection. Attempt, evidence, final session completion, and pending outbox records are
+written atomically.
+
+Localization tables are owned beside their canonical sources. Their composite keys bind
+one allowlisted locale to one immutable source version. English remains in the source
+columns; Vietnamese rows contain presentation text only. Localized question options must
+retain the canonical opaque option-ID set, which is checked again by the assessment
+application before delivery. Answer keys are never copied into translation tables.
 
 ## Index principles
 

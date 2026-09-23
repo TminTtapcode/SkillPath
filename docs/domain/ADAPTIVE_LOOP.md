@@ -44,6 +44,14 @@ Cosmetic profile changes do not trigger replan.
 
 For an initial single-process implementation, steps may run synchronously after commit, but contracts and idempotency remain mandatory.
 
+Phase 4 implements this boundary with the MySQL `outbox_events` envelope. A dispatcher
+claims stable `(occurred_at, id)` batches using a 30-second lease, retries with bounded
+exponential backoff, and stops after ten failed attempts. Handlers allowlist the exact
+owner/event/version tuple. `AssessmentEvidenceCreated` is deduplicated by source event,
+then the learner/node projection is locked and rebuilt from ledger order
+`(observed_at, source_event_id)` before `KnowledgeStateChanged` is emitted. There is no
+broker and no planner invocation in Phase 4.
+
 ## 4. Plan revision rules
 
 - Preserve completed tasks.

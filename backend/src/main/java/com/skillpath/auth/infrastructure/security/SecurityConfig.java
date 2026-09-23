@@ -132,6 +132,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/v1/admin/knowledge/**")
                         .hasAnyRole("CURATOR", "ADMIN")
+                        .requestMatchers("/api/v1/admin/progress/**")
+                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
                 .exceptionHandling(exceptions -> exceptions

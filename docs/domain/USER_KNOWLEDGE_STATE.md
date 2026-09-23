@@ -41,10 +41,11 @@ Lưu `id`, `user_id`, `knowledge_node_id`, `dimension`, `score`, `reliability`, 
 
 ## 3. State update v1
 
-Với evidence mới `e` và điểm dimension cũ `s`:
+Với evidence mới `e` và điểm dimension cũ `s`, policy `knowledge-state-v1` áp dụng
+evidence tại chính observation point bất biến của nó:
 
 ```text
-effectiveReliability = clamp(e.reliability × freshnessFactor, 0, 1)
+effectiveReliability = clamp(e.reliability, 0, 1)
 alpha = clamp(MIN_ALPHA + effectiveReliability × ALPHA_RANGE, MIN_ALPHA, MAX_ALPHA)
 newScore = clamp(s + alpha × (e.score - s), 0, 1)
 ```
@@ -58,13 +59,11 @@ MAX_ALPHA: 0.45
 INITIAL_DIMENSION_SCORE: 0.0
 ```
 
-Mỗi lần projection/rebuild chụp một `projectionAsOf` từ server clock. Freshness là
-pure function của `observed_at`, `projectionAsOf` và policy version. Live ingest dùng
-transaction instant đã chụp làm `projectionAsOf`; evidence vừa quan sát tại instant đó
-có `freshnessFactor = 1`. Replay phải nhận `projectionAsOf` rõ ràng, không đọc clock
-thay đổi trong vòng lặp.
+Elapsed time không thay đổi acquisition score đã lưu. Decay chỉ được áp dụng khi tạo
+effective snapshot tại một `projectionAsOf` rõ ràng. Quy tắc này bảo đảm incremental
+ingest và replay không diễn giải lại alpha lịch sử theo thời điểm chạy lại.
 
-Evidence được áp dụng theo `(observed_at ASC, evidence_id ASC)`. Với cùng ledger,
+Evidence được áp dụng theo `(observed_at ASC, source_event_id ASC)`. Với cùng ledger,
 policy version và `projectionAsOf`, live projection và replay phải tạo cùng kết quả.
 Formula v1 ưu tiên dễ giải thích; không tuyên bố đây là mô hình thống kê tối ưu.
 
@@ -128,9 +127,13 @@ effectiveDimension = dimensionScore × exp(-lambda × daysSinceRelevantEvidence)
 
 Lambda theo dimension; recall thường decay nhanh hơn application. Planner sử dụng effective mastery, UI có thể hiển thị stored mastery kèm trạng thái review.
 
+`knowledge-state-v1` biểu diễn lambda bằng half-life dễ audit: recognition 120 ngày,
+understanding 150 ngày, recall 45 ngày và application 180 ngày. Confidence dùng cửa sổ
+365 ngày; evidence có effective reliability dưới `0.30` không tính coverage.
+
 Module `review` sở hữu lịch và việc tăng/giảm interval. Lịch mặc định sau successful
 review: `1, 3, 7, 14, 30, 60` ngày. Sai hoặc score < 0.6 đưa interval về 1 ngày; score
-0.6–0.79 giữ/rút một bậc; score ≥ 0.8 tăng một bậc. Progress nhận review snapshot qua
+0.6–0.79 rút một bậc (không thấp hơn bậc đầu); score ≥ 0.8 tăng một bậc. Progress nhận review snapshot qua
 public contract và không tự cập nhật schedule.
 
 ## 8. Misconception state
@@ -140,6 +143,11 @@ Lưu `user_misconception(user_id, code, knowledge_node_id, severity, confidence,
 - Evidence lặp lại cùng misconception tăng confidence/severity theo policy.
 - Một câu đúng không tự xóa misconception.
 - Cần verification evidence đúng dimension để đánh dấu resolved.
+
+`misconception-v1` tích lũy confidence theo
+`1 - (1 - oldConfidence) × (1 - evidenceReliability)`. Hai verification evidence sau
+lần quan sát cuối, cùng node/dimension, score `>= 0.80`, reliability `>= 0.70` và không
+lặp code sẽ đánh dấu resolved. Chỉ code trong taxonomy versioned mới được chấp nhận.
 
 ## 9. Consistency và concurrency
 

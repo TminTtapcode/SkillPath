@@ -42,4 +42,29 @@ class ArchitectureTest {
                 .resideInAPackage("..knowledge.infrastructure.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void assessmentPersistenceRemainsPrivate() {
+        noClasses()
+                .that()
+                .resideOutsideOfPackage("..assessment.infrastructure.persistence..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("..assessment.infrastructure.persistence..")
+                .check(classes);
+    }
+
+    @Test
+    void progressPersistenceRemainsPrivate() {
+        noClasses().that().resideOutsideOfPackage("..progress.infrastructure.persistence..")
+                .should().dependOnClassesThat().resideInAPackage("..progress.infrastructure.persistence..")
+                .check(classes);
+    }
+
+    @Test
+    void reviewPersistenceRemainsPrivate() {
+        noClasses().that().resideOutsideOfPackage("..review.infrastructure.persistence..")
+                .should().dependOnClassesThat().resideInAPackage("..review.infrastructure.persistence..")
+                .check(classes);
+    }
 }

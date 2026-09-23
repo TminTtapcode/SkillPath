@@ -1,5 +1,9 @@
 # Testing Strategy
 
+Phase 4 adds pure projection/decay and review-interval fixtures, clean and V11-to-V13
+MySQL migration coverage, idempotent outbox replay, and ownership/role API checks.
+Stored mastery must remain stable while effective mastery changes with an injected clock.
+
 ## Test pyramid
 
 ### Unit
@@ -96,3 +100,32 @@ tests listed above.
 - Architecture tests keep knowledge persistence private and domain code framework-free.
 - Checked-in OpenAPI is regenerated into TypeScript and frontend lint/test/build remain
   regression gates even though Phase 2 adds no learner UI.
+
+## Phase 3 executable gates
+
+- Pure domain fixtures cover exact single choice, partial/penalized multiple choice,
+  invalid selections, dimension authority, reliability caps/weights, rounding, and
+  deterministic replay.
+- `AssessmentMigrationUpgradeIT` proves V7-to-V9 upgrade and the eight-question seed;
+  clean application integration applies V1-to-V9 on MySQL 8.4.
+- `PhaseThreeFlowIT` covers create/resume, concurrent-start convergence, pinned order,
+  answer-key secrecy, CSRF,
+  ownership concealment, expiry persistence, incomplete/completed result semantics,
+  same-key replay, hash mismatch, different-key conflict, exact evidence/outbox counts,
+  and concurrent one-attempt behavior.
+- Frontend tests cover objective question and completed evidence states, non-mastery
+  language, and stable idempotency headers. Generated types, lint, test, and build are
+  required gates.
+
+## Localization executable gates
+
+- `SupportedLocaleTest` covers exact, weighted, malformed, absent, and unsupported
+  language resolution with deterministic English fallback.
+- `LocalizationMigrationUpgradeIT` proves V9-to-V11 on MySQL 8.4, complete 1/17/8
+  Vietnamese seed coverage, JSON option cardinality, and rejection of unsupported locales.
+- `PhaseThreeFlowIT` proves localized goal/node/question reads, `Content-Language`, stable
+  session/question/option IDs, and unsupported-language English fallback without exposing
+  answer keys.
+- Frontend tests cover default Vietnamese, persisted English selection, locale headers,
+  `Asia/Ho_Chi_Minh`, and selection preservation while a question is re-rendered in the
+  other language.

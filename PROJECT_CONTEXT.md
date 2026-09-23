@@ -11,11 +11,26 @@
 
 ## Current phase
 
-**Phase 2 — Knowledge System completed locally.** The repository now contains the
-versioned Java Backend graph schema and seed, deterministic validation/traversal,
-published read APIs, and secure atomic curator publication. Phase 3 (Assessment) has
-not started. Validation evidence is recorded in
-`docs/plans/PHASE_2_KNOWLEDGE_SYSTEM.md`.
+**Phase 3 — Diagnostic Assessment and Concept Evidence completed locally.** The
+repository now delivers the authenticated eight-question Java Backend diagnostic,
+deterministic objective evidence, assessment-owned idempotency, and a durable Phase 4
+handoff. The cross-cutting L10 localization milestone is also completed locally: the
+current learner journey and project-authored content support Vietnamese and English.
+Validation evidence is recorded in `docs/plans/PHASE_3_ASSESSMENT.md` and
+`docs/plans/LOCALIZATION_V1.md`.
+
+**Phase 4 — Progress and Review is completed locally.** Assessment evidence is consumed
+through a leased/retryable local outbox, stored in an append-only ledger, and projected
+by `knowledge-state-v1`. Learners can inspect localized effective knowledge state;
+mastered concepts receive deterministic `review-interval-v1` schedules. Phase 4 does
+not create a Today plan—those authorities remain in later phases.
+
+**Phase 5 — Learning system is at discover/design, not implementation.**
+`docs/plans/PHASE_5_LEARNING_SYSTEM.md` proposes a learner-selected, versioned
+learn/practice/recall sequence as an execution bridge. It needs owner approval and an
+accepted Phase 3/localization/Phase 4 baseline before code changes. It does not grant
+Learning the authority to generate a personalized Today plan or raise mastery from
+self-reported task completion.
 
 ## Confirmed decisions
 
@@ -31,6 +46,14 @@ not started. Validation evidence is recorded in
 - Curriculum and graph contracts must support additional IT specializations without introducing subject-specific rules into the planner core.
 - Open-source projects are inputs to bounded research/spikes, not architecture or domain authorities. Forking an existing tutor is not the default strategy.
 - AI is an assistant behind validated contracts, not the product architect or final decision maker.
+- Diagnostic evidence is observational, not authoritative mastery: Assessment records
+  what an attempt demonstrated, Knowledge State estimates what the learner currently
+  knows, and Planner decides what the learner should do next.
+- New learner registration and goal setup default to the IANA timezone
+  `Asia/Ho_Chi_Minh`; existing stored profile/goal timezones are not silently rewritten.
+- Supported presentation locales are `vi-VN` and `en`. New browsers default to
+  Vietnamese, the browser-only selection is persisted in `localStorage`, and unsupported
+  request languages fall back to canonical English.
 - The four core IP areas are Knowledge Graph, Assessment Model, User Knowledge State, and Planner Algorithm.
 - Dockerize local infrastructure first. Containerize backend/frontend after the first end-to-end vertical slice runs locally.
 - Redis, queues, Kubernetes, microservices, social features, marketplace, voice tutor, and complex gamification are outside MVP.
@@ -50,16 +73,19 @@ not started. Validation evidence is recorded in
 
 - Product vision and MVP scope: defined.
 - System architecture/module boundaries: defined for MVP.
-- MySQL logical data model and migration rules: defined; Phase 1 identity/session/goal
-  and Phase 2 knowledge graph V6/V7 migrations are implemented and tested from clean
-  and V5 upgrade paths.
+- MySQL logical data model and migration rules: defined; Phase 1 identity/session/goal,
+  Phase 2 knowledge graph V6/V7 and Phase 3 assessment V8/V9 migrations are
+  implemented; V10/V11 add localization overlays; V12/V13 add outbox leasing, the
+  evidence ledger/projection, misconceptions, and review schedules.
+  Clean and historical upgrade paths are tested on MySQL 8.4.
 - Core domain specifications: defined at v1 design level.
 - Learning task and adaptive loop: defined at v1 design level.
 - Learner-facing visual goal-map/read-model direction: defined for MVP with accessibility and progressive-disclosure constraints.
 - Open-source adoption register, license/provenance workflow, visual-map spike, and post-MVP algorithm evaluation path: defined.
-- API contract: Phase 1 identity/goal and Phase 2 published graph/admin lifecycle
-  endpoints are published in `docs/api/openapi-v1.yaml`; frontend TypeScript types are
-  generated and checked for drift.
+- API contract: Phase 1 identity/goal, Phase 2 published graph/admin lifecycle, and
+  Phase 3 diagnostic/evidence endpoints are published in `docs/api/openapi-v1.yaml`;
+  localized reads document `Accept-Language`/`Content-Language`; frontend TypeScript
+  types are generated and checked for drift.
 - AI boundary: defined.
 - Development, testing, and Docker strategies: defined.
 
@@ -129,13 +155,43 @@ plan or ADR change.
 - Goal-owned HTTP adapter delegates through the public knowledge application contract;
   no cross-module persistence import or new graph dependency was introduced.
 
+## Implemented Phase 3 surface
+
+- Flyway V8 assessment schema and V9 project-authored eight-question Java Backend
+  diagnostic seed with immutable question versions and graph-version mappings.
+- Seven-day create/resume flow pinned to the active goal, published graph, question
+  snapshot, and `assessment-objective-v1` policy; concurrent starts serialize through
+  the public goal contract and converge on one session.
+- Deterministic single/multiple-choice scoring, bounded `RECOGNITION`/`UNDERSTANDING`
+  evidence, idempotent sequential attempts, and atomic attempt/evidence/completion/
+  outbox writes.
+- Ownership-concealed diagnostic APIs, answer-key secrecy, CSRF/session enforcement,
+  and learner UI for start/resume, questions, expiry, recovery, and evidence results.
+- Pending `AssessmentEvidenceCreated` outbox rows are the intentional Phase 4 handoff;
+  Phase 3 does not calculate mastery, prerequisite satisfaction, or a Today plan.
+
+## Implemented localization surface
+
+- Dependency-free typed Vietnamese/English UI dictionaries cover every current learner
+  route, validation/async state, evidence boundary, and accessibility label. The header
+  selector persists only the allowlisted locale and synchronizes the HTML `lang` value.
+- The central API client sends `Accept-Language`; locale-aware goal, public knowledge,
+  diagnostic-question, and result reads return `Content-Language`.
+- Flyway V10 owns translation overlays and V11 seeds one goal template, all 17 graph
+  nodes, and all eight diagnostic question versions in Vietnamese.
+- English stays canonical. Translation overlays preserve graph/question/option IDs;
+  scoring, idempotency, evidence, outbox payloads, ownership, and authorization remain
+  locale-independent. A mid-question language switch preserves the selected option IDs.
+
 ## Next approved work sequence
 
-1. Discover/design Phase 3 Assessment using the approved plan workflow and the
-   published knowledge-node/version contracts.
-2. Keep the React Flow versus Cytoscape.js visualization comparison as a bounded later
+1. Commit the completed Phase 3, localization, and Phase 4 baseline.
+2. Review/approve `docs/plans/PHASE_5_LEARNING_SYSTEM.md`, then implement learning
+   resources, task lifecycle, and learner-selected execution; do not introduce planner
+   ranking authority early.
+3. Keep the React Flow versus Cytoscape.js visualization comparison as a bounded later
    spike; Phase 2 adds no graph-rendering dependency or learner roadmap UI.
-3. Continue Assessment, Knowledge State, Learning Task, Planner, and Adaptive Loop in
+4. Continue Learning Task, Planner, and Adaptive Loop in
    roadmap order; keep curriculum data generic across IT specializations.
 
 ## Context maintenance

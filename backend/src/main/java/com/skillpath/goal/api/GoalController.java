@@ -7,6 +7,7 @@ import com.skillpath.goal.domain.UserGoal;
 import com.skillpath.knowledge.application.KnowledgeGraphQueries;
 import com.skillpath.knowledge.application.KnowledgeGraphService;
 import com.skillpath.shared.api.ApiException;
+import com.skillpath.shared.localization.SupportedLocale;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -16,6 +17,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,8 +41,15 @@ public class GoalController {
     }
 
     @GetMapping("/goal-templates")
-    List<GoalTemplateResponse> templates() {
-        return goalService.listTemplates().stream().map(GoalTemplateResponse::from).toList();
+    ResponseEntity<List<GoalTemplateResponse>> templates(
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage) {
+        SupportedLocale locale = SupportedLocale.resolve(acceptLanguage);
+        List<GoalTemplateResponse> body = goalService.listTemplates(locale).stream()
+                .map(GoalTemplateResponse::from)
+                .toList();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_LANGUAGE, locale.tag())
+                .body(body);
     }
 
     @PostMapping("/goals")
@@ -66,15 +75,26 @@ public class GoalController {
     }
 
     @GetMapping("/goal-templates/{goalTemplateId}/graph")
-    KnowledgeGraphService.GoalGraphView graph(
+    ResponseEntity<KnowledgeGraphService.GoalGraphView> graph(
             @org.springframework.web.bind.annotation.PathVariable String goalTemplateId,
             @RequestParam(required = false) String anchorNodeId,
             @RequestParam(defaultValue = "2") int depth,
             @RequestParam(defaultValue = "100") int limit,
-            @RequestParam(required = false) String cursor) {
+            @RequestParam(required = false) String cursor,
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage) {
         long templateId = parseOpaqueId(goalTemplateId, "INVALID_GOAL_TEMPLATE_ID");
         Long anchor = anchorNodeId == null ? null : parseOpaqueId(anchorNodeId, "INVALID_GRAPH_ANCHOR");
-        return knowledgeGraphQueries.goalGraph(templateId, anchor, depth, limit, cursor);
+        SupportedLocale locale = SupportedLocale.resolve(acceptLanguage);
+        KnowledgeGraphService.GoalGraphView body = knowledgeGraphQueries.goalGraph(
+                templateId,
+                anchor,
+                depth,
+                limit,
+                cursor,
+                locale);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_LANGUAGE, locale.tag())
+                .body(body);
     }
 
     private long parseOpaqueId(String value, String code) {

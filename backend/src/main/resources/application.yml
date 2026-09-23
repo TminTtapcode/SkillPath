@@ -54,3 +54,6 @@ skillpath:
     maximum-sessions: 5
   idempotency:
     retention: 24h
+  outbox:
+    enabled: ${SKILLPATH_OUTBOX_ENABLED:true}
+    poll-ms: ${SKILLPATH_OUTBOX_POLL_MS:1000}
