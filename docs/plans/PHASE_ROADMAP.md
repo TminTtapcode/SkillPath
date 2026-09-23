@@ -104,6 +104,8 @@ visual map explains the same current/ready/blocked path from the same snapshots.
 
 ## Phase 7 — Adaptive loop
 
+Status: `DONE` on 2026-09-23. Core orchestration, task check API, evidence projection, and replan worker integrated and enabled. Phase 8 will focus on AI evaluation.
+
 - Evidence → state → replan orchestration.
 - Failure/retry/idempotency/outbox paths.
 - Missed day and time override journeys.

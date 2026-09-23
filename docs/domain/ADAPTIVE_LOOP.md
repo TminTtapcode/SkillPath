@@ -61,6 +61,31 @@ commands and does not add automatic replanning. Phase 7 must register a versione
 consumer and add the durable event handoff when planner/evaluation orchestration exists.
 Self-reported activity never updates Progress or Review.
 
+For the owner-approved Phase 7 task-check path, the event chain is locked as
+`AssessmentEvidenceCreated v2` (one per evidence row, with attempt kind/ID and
+expected count) → Progress's attempt-level projection barrier → one
+`EvidenceAccepted v1` → Review's owned schedule/processed-source receipt → one
+`PlanningInputsReady v1` → Planner's unique replan request. Progress emits the
+attempt fact only after **all** its evidence rows are projected, even when rounded
+mastery/status does not change. Review emits readiness in the same transaction
+as its schedule work; Planner never reads ahead of that commit. Diagnostic
+attempts may be processed by Review before completion, but only the final
+diagnostic attempt is replan-eligible. Legacy v1 evidence/state events keep their
+existing handlers and do not retroactively create duplicate P7 replans.
+
+P7.3 persists the Planner request before execution and leases it independently
+of outbox delivery. The disabled-by-default worker retries after a rolled-back
+executor transaction, reclaims expired leases, and records a terminal failure
+after ten attempts. It serializes execution through the Goal application lock.
+The production immutable-revision executor is a P7.4 dependency; until then,
+neither the worker nor the task-check gate is enabled.
+
+Review is the sole owner of `review_schedules` and stops its legacy direct update
+of `user_knowledge.next_review_at`. Progress presents `nextReviewAt` by querying
+a bounded Review application contract at the same captured read instant; the
+old nullable Progress column is non-authoritative. Neither Review nor Planner
+uses another module's persistence adapter/table to cross this boundary.
+
 ## 4. Plan revision rules
 
 Phase 6 permits an explicit revision only when every task in the existing planner
@@ -110,3 +135,13 @@ seemingly current map.
 ## 9. End-to-end acceptance
 
 Given HTTP mastery 0.35 and REST API blocked by HTTP, completing a validated HTTP practice increases relevant dimensions, creates exactly one new state projection, and triggers a new plan. REST API is selected only after the prerequisite threshold is met; otherwise another HTTP/remedial task is selected. Repeating the same completion request does not duplicate evidence, state update, or active plan revision.
+
+## 10. Phase 7 Implementation Notes (2026-09-23)
+
+Phase 7 delivered the adaptive loop infrastructure:
+- **Evidence generation**: `TaskCheckController` receives attempts and issues `AssessmentEvidenceCreated` events via the `outbox_events` table.
+- **State change**: `AssessmentEvidenceHandler` consumes the event, appends to the ledger, and projects a new knowledge state, yielding a `KnowledgeStateChanged` event.
+- **Replan trigger**: `KnowledgeStateChangedHandler` updates the review schedule and issues a durable `ReplanRequest` to the `JdbcReplanRequestStore`.
+- **Replan worker**: The `PlannerReplanWorker` polls the request store with a 30s leased lock, executes the `planner-v2` revision algorithm, and completes the request.
+
+This decoupled, attempt-level architecture ensures that assessment failures or rapid sequential submissions are handled predictably without creating race conditions in the planner or corrupting the knowledge state. AI evaluation remains deferred to Phase 8.

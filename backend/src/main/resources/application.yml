@@ -57,3 +57,7 @@ skillpath:
   outbox:
     enabled: ${SKILLPATH_OUTBOX_ENABLED:true}
     poll-ms: ${SKILLPATH_OUTBOX_POLL_MS:1000}
+  phase7:
+    task-check-enabled: ${SKILLPATH_PHASE7_TASK_CHECK_ENABLED:true}
+    replan-worker-enabled: ${SKILLPATH_PHASE7_REPLAN_WORKER_ENABLED:true}
+    replan-poll-ms: ${SKILLPATH_PHASE7_REPLAN_POLL_MS:1000}

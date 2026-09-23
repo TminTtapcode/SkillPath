@@ -43,6 +43,17 @@ a dependency. Automatic evidence-driven replan, time overrides, and goal complet
 remain outside Phase 6. Validation and launch risks are tracked in
 `docs/plans/PHASE_6_PLANNER.md` and `docs/research/PHASE_6_VISUAL_MAP_SPIKE.md`.
 
+**Phase 7 — Adaptive loop is completed.** V21–V24 established the
+objective task-check primitive and ordered Evidence → Progress → Review → durable
+Planner request chain. V25 and the final P7 implementations add a
+`planner-v2` request executor, immutable carry-forward task links, audited
+day-local time overrides, explicit missed-day refresh, and bilingual
+pending/stale UI states. Rollout gates are enabled by default for both
+the task-check endpoint and the replan-worker background polling. The golden
+path from registration through objective check evidence and roadmap revision
+has passed regression. This does not claim that Goal can auto-complete or
+practical skill has been evaluated — AI hardening happens in Phase 8.
+
 ## Confirmed decisions
 
 - Build a web MVP first; no native mobile app in MVP.
@@ -245,8 +256,21 @@ plan or ADR change.
 
 ## Next work sequence
 
-1. Discover/design Phase 7 for evaluated task evidence, evidence-driven replan,
-   missed-day handling, partial-plan preservation, and today's time override.
+1. Continue the owner-approved Phase 7 implementation. The first checkpoint
+   removes Review's direct `user_knowledge` write, composes the due date through
+   a Review application query, adds an attempt-level event barrier, and implements
+   a rollout-gated objective task check with bilingual UI. The pure adaptive
+   budget rule and Learning-owned partial-task expiry/append contract are tested,
+   but not yet connected to Planner. A durable Planner request is recorded after
+   Review. V24 adds a leased, retryable Planner request worker that locks the
+   owned Goal and calls a transactional executor. The worker is disabled by
+   default pending the complete end-to-end gate; task checks also remain gated
+   off. The current P7.4/7.5 working tree includes immutable partial-plan
+   carry-forward, daily override, and missed-day refresh; targeted MySQL tests
+   have passed. Complete a real diagnostic → objective task check → Review →
+   revised Today/roadmap golden path, full regression/security audit, and a
+   freshly rebuilt Compose browser smoke before enabling either gate or
+   marking P7 done. Exact validation is tracked in the P7 plan.
 2. Before public launch, conduct real-device and assistive-technology roadmap
    usability checks, pedagogical review of seeded content, privacy retention design,
    and Flyway/MySQL compatibility review. Do not infer full-curriculum coverage from
