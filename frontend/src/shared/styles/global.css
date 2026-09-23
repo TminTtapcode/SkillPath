@@ -7,79 +7,84 @@
 
 :root {
   /* --- Canvas & Surfaces --- */
-  --sp-canvas-bg: #f8fafc;
+  --sp-canvas-bg: #f7f7f7;
   --sp-surface-card: #ffffff;
-  --sp-surface-subtle: #f1f5f9;
-  --sp-surface-active: #e2e8f0;
-  --sp-surface-inset: #f8fafc;
+  --sp-surface-subtle: #f0f0f0;
+  --sp-surface-active: #e5e5e5;
+  --sp-surface-inset: #f7f7f7;
 
   /* --- Borders --- */
-  --sp-border-subtle: #f1f5f9;
-  --sp-border-default: #e2e8f0;
-  --sp-border-strong: #cbd5e1;
-  --sp-border-focus: #4f46e5;
+  --sp-border-subtle: #f0f0f0;
+  --sp-border-default: #e5e5e5;
+  --sp-border-strong: #cccccc;
+  --sp-border-focus: #1cb0f6; /* Sky blue focus */
 
   /* --- Text & Contrast --- */
-  --sp-text-primary: #0f172a; /* 15.8:1 on white */
-  --sp-text-secondary: #334155; /* 9.2:1 on white */
-  --sp-text-muted: #64748b; /* 4.6:1 on white (WCAG AA) */
-  --sp-text-disabled: #94a3b8;
+  --sp-text-primary: #4b4b4b; /* softer dark grey */
+  --sp-text-secondary: #777777;
+  --sp-text-muted: #afafaf;
+  --sp-text-disabled: #d5d5d5;
   --sp-text-inverse: #ffffff;
 
-  /* --- Primary Action (Modern Indigo) --- */
-  --sp-primary: #4f46e5;
-  --sp-primary-hover: #4338ca;
-  --sp-primary-active: #3730a3;
-  --sp-primary-subtle: #eef2ff;
-  --sp-primary-shadow: #3730a3;
+  /* --- Primary Action (Playful Green) --- */
+  --sp-primary: #58cc02;
+  --sp-primary-hover: #46a302;
+  --sp-primary-active: #58cc02;
+  --sp-primary-subtle: #d7ffb8;
+  --sp-primary-shadow: #58a700;
+
+  /* --- Secondary Action (Sky Blue) --- */
+  --sp-secondary: #1cb0f6;
+  --sp-secondary-hover: #1899d6;
+  --sp-secondary-shadow: #1899d6;
 
   /* --- Pedagogical Knowledge States --- */
-  --sp-state-unreached-fg: #64748b;
-  --sp-state-unreached-bg: #f8fafc;
-  --sp-state-unreached-border: #cbd5e1;
+  --sp-state-unreached-fg: #afafaf;
+  --sp-state-unreached-bg: #f7f7f7;
+  --sp-state-unreached-border: #e5e5e5;
 
-  --sp-state-learning-fg: #2563eb;
-  --sp-state-learning-bg: #eff6ff;
-  --sp-state-learning-border: #3b82f6;
+  --sp-state-learning-fg: #1cb0f6;
+  --sp-state-learning-bg: #ddf4ff;
+  --sp-state-learning-border: #1899d6;
 
-  --sp-state-review-fg: #d97706;
-  --sp-state-review-bg: #fffbeb;
-  --sp-state-review-border: #f59e0b;
+  --sp-state-review-fg: #ffc800;
+  --sp-state-review-bg: #fff6d6;
+  --sp-state-review-border: #e5b400;
 
-  --sp-state-mastered-fg: #059669;
-  --sp-state-mastered-bg: #ecfdf5;
-  --sp-state-mastered-border: #10b981;
+  --sp-state-mastered-fg: #58cc02;
+  --sp-state-mastered-bg: #d7ffb8;
+  --sp-state-mastered-border: #58a700;
 
-  --sp-state-blocked-fg: #e11d48;
-  --sp-state-blocked-bg: #fff1f2;
-  --sp-state-blocked-border: #f43f5e;
+  --sp-state-blocked-fg: #ff4b4b;
+  --sp-state-blocked-bg: #ffdfe0;
+  --sp-state-blocked-border: #ea2b2b;
 
   /* --- System Status --- */
-  --sp-error: #dc2626;
-  --sp-error-bg: #fef2f2;
-  --sp-error-border: #fecaca;
-  --sp-success: #16a34a;
-  --sp-success-bg: #f0fdf4;
-  --sp-success-border: #bbf7d0;
+  --sp-error: #ff4b4b;
+  --sp-error-bg: #ffdfe0;
+  --sp-error-border: #ea2b2b;
+  --sp-success: #58cc02;
+  --sp-success-bg: #d7ffb8;
+  --sp-success-border: #58a700;
 
   /* --- Code & Monospace --- */
-  --sp-code-bg: #0f172a;
-  --sp-code-text: #f8fafc;
-  --sp-code-border: #334155;
+  --sp-code-bg: #4b4b4b;
+  --sp-code-text: #f7f7f7;
+  --sp-code-border: #777777;
 
   /* --- Typography Scale --- */
   --sp-font-sans:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    'Nunito', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
     sans-serif;
   --sp-font-mono: 'JetBrains Mono', 'Consolas', monospace;
 
-  --sp-text-xs: 0.75rem; /* 12px */
-  --sp-text-sm: 0.875rem; /* 14px */
-  --sp-text-base: 1rem; /* 16px */
-  --sp-text-md: 1.125rem; /* 18px */
-  --sp-text-lg: 1.25rem; /* 20px */
-  --sp-text-xl: 1.5rem; /* 24px */
-  --sp-text-2xl: 1.875rem; /* 30px */
+  --sp-text-xs: 0.8125rem; /* 13px */
+  --sp-text-sm: 0.9375rem; /* 15px */
+  --sp-text-base: 1.0625rem; /* 17px */
+  --sp-text-md: 1.1875rem; /* 19px */
+  --sp-text-lg: 1.375rem; /* 22px */
+  --sp-text-xl: 1.625rem; /* 26px */
+  --sp-text-2xl: 2rem; /* 32px */
 
   /* --- Spacing System (8pt Grid) --- */
   --sp-space-1: 0.25rem; /* 4px */
@@ -93,20 +98,16 @@
   --sp-space-12: 3rem; /* 48px */
 
   /* --- Radii --- */
-  --sp-radius-sm: 6px;
-  --sp-radius-md: 10px;
+  --sp-radius-sm: 8px;
+  --sp-radius-md: 12px;
   --sp-radius-lg: 16px;
   --sp-radius-xl: 24px;
   --sp-radius-full: 9999px;
 
   /* --- Shadows (Tactile & Ambient depth) --- */
-  --sp-shadow-subtle: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
-  --sp-shadow-card:
-    0 4px 16px -2px rgba(15, 23, 42, 0.06),
-    0 2px 4px -1px rgba(15, 23, 42, 0.03);
-  --sp-shadow-elevated:
-    0 12px 28px -4px rgba(15, 23, 42, 0.09),
-    0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  --sp-shadow-subtle: 0 2px 0 0 rgba(0, 0, 0, 0.05);
+  --sp-shadow-card: 0 4px 0 0 rgba(0, 0, 0, 0.05);
+  --sp-shadow-elevated: 0 6px 0 0 rgba(0, 0, 0, 0.05);
 }
 
 /* ==========================================================================
@@ -173,6 +174,81 @@ a:focus-visible {
 }
 
 /* ==========================================================================
+   Base Buttons (Playful Claymorphism)
+   ========================================================================== */
+
+button,
+.button-link,
+.today-start-btn,
+.today-generate-btn,
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-space-2);
+  padding: 0.75rem 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--sp-radius-lg);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 150ms ease;
+  user-select: none;
+  background-color: var(--sp-surface-active);
+  color: var(--sp-text-primary);
+  box-shadow: 0 4px 0 0 var(--sp-border-strong);
+  margin-bottom: 4px; /* Space for the shadow */
+}
+
+button:active,
+.button-link:active,
+.today-start-btn:active,
+.today-generate-btn:active,
+.button-secondary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 0 transparent;
+  margin-bottom: 0;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: translateY(0);
+  box-shadow: 0 4px 0 0 var(--sp-border-default);
+}
+
+.today-start-btn,
+.today-generate-btn,
+button[type="submit"] {
+  background-color: var(--sp-primary);
+  color: var(--sp-text-inverse);
+  box-shadow: 0 4px 0 0 var(--sp-primary-shadow);
+}
+
+.today-start-btn:hover,
+.today-generate-btn:hover,
+button[type="submit"]:hover {
+  background-color: var(--sp-primary-hover);
+}
+
+.today-start-btn:active,
+.today-generate-btn:active,
+button[type="submit"]:active {
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.button-secondary {
+  background-color: var(--sp-secondary);
+  color: var(--sp-text-inverse);
+  box-shadow: 0 4px 0 0 var(--sp-secondary-shadow);
+}
+
+.button-secondary:hover {
+  background-color: var(--sp-secondary-hover);
+}
+
+/* ==========================================================================
    Navigation Header & App Layout Shell
    ========================================================================== */
 
@@ -223,7 +299,7 @@ a:focus-visible {
     position: sticky;
     top: 0;
     background-color: var(--sp-surface-card);
-    border-right: 1.5px solid var(--sp-border-default);
+    border-right: 2px solid var(--sp-border-default);
     padding: 1.5rem 1rem;
     z-index: 30;
   }
@@ -312,8 +388,8 @@ a:focus-visible {
   background-color: var(--sp-primary-subtle);
   color: var(--sp-primary);
   font-weight: 700;
-  border: 1px solid #bfdbfe;
-  box-shadow: inset 3px 0 0 var(--sp-primary);
+  border: 2px solid var(--sp-primary-hover);
+  box-shadow: none;
 }
 
 .sidebar-nav-link.active .nav-icon {
@@ -331,8 +407,8 @@ a:focus-visible {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: linear-gradient(135deg, #eef2ff 0%, #ecfdf5 100%);
-  border: 1px solid #bfdbfe;
+  background: linear-gradient(135deg, var(--sp-primary-subtle) 0%, #ecfdf5 100%);
+  border: 2px solid var(--sp-primary-hover);
   border-radius: var(--sp-radius-md);
 }
 
@@ -380,7 +456,7 @@ a:focus-visible {
     right: 0;
     height: 62px;
     background-color: var(--sp-surface-card);
-    border-top: 1.5px solid var(--sp-border-default);
+    border-top: 2px solid var(--sp-border-default);
     z-index: 50;
     box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
   }
@@ -1338,6 +1414,32 @@ dd {
   height: 1.2rem;
 }
 
+.task-check {
+  display: grid;
+  gap: var(--sp-space-3);
+  margin-block: var(--sp-space-4);
+  padding: 1.25rem;
+  border: 1px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-lg);
+}
+
+.task-check fieldset {
+  display: grid;
+  gap: var(--sp-space-2);
+}
+
+.task-check-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  min-height: 44px;
+}
+
+.task-check-option input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
 .learning-minutes input,
 .learning-reason select {
   max-width: 12rem;
@@ -1436,11 +1538,11 @@ dd {
 }
 
 .planner-task {
-  border: 1.5px solid var(--sp-border-default);
-  border-radius: var(--sp-radius-md);
+  border: 2px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-xl);
   padding: 1.25rem 1.5rem;
   background: var(--sp-surface-card);
-  box-shadow: var(--sp-shadow-subtle);
+  box-shadow: 0 4px 0 0 var(--sp-border-subtle);
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
@@ -1545,11 +1647,12 @@ dd {
    ========================================================================== */
 
 .budget-progress-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
-  border: 1.5px solid #c7d2fe;
-  border-radius: var(--sp-radius-lg);
+  background: var(--sp-surface-card);
+  border: 2px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-xl);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
+  box-shadow: 0 4px 0 0 var(--sp-border-subtle);
 }
 
 .budget-progress-header {
@@ -1613,19 +1716,30 @@ dd {
 }
 
 .today-start-btn {
-  font-size: 1rem !important;
-  min-height: 48px !important;
-  padding: 0 2rem !important;
-  border-radius: 14px !important;
+  font-size: 1.1rem !important;
+  min-height: 52px !important;
+  padding: 0 2.5rem !important;
+  border-radius: var(--sp-radius-xl) !important;
   background-color: var(--sp-primary) !important;
-  box-shadow: 0 4px 0 #312e81 !important;
+  box-shadow: 0 6px 0 var(--sp-primary-shadow) !important;
+}
+
+.today-start-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 transparent !important;
 }
 
 .today-generate-btn {
-  font-size: 1rem !important;
-  min-height: 48px !important;
-  padding: 0 2rem !important;
-  border-radius: 14px !important;
+  font-size: 1.1rem !important;
+  min-height: 52px !important;
+  padding: 0 2.5rem !important;
+  border-radius: var(--sp-radius-xl) !important;
+  box-shadow: 0 6px 0 var(--sp-primary-shadow) !important;
+}
+
+.today-generate-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 transparent !important;
 }
 
 .page-footer-nav {
