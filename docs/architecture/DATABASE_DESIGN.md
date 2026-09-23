@@ -21,7 +21,7 @@
 | Localization overlays | `goal_template_translations`, `knowledge_node_translations`, `question_version_translations` |
 | Progress | `knowledge_evidence`, `user_knowledge`, `user_misconceptions` |
 | Learning | `resources`, `resource_versions`, `resource_version_translations`, `knowledge_resources`, `task_templates`, `task_template_versions`, `task_template_translations`, `task_template_knowledge`, `learning_sequences`, `learning_sequence_items`, `learning_sessions`, `learning_tasks`, `learning_task_events`, `learning_command_receipts` |
-| Planner | `planner_policies`, `planning_snapshots`, `planner_decisions`, `planner_decision_candidates`, `daily_plans`, `daily_plan_items` |
+| Planner | `planner_policies`, `planning_snapshots`, `planner_decisions`, `planner_decision_candidates`, `daily_plans`, `daily_plan_items`, `planner_replan_requests` |
 | Review | `review_schedules`, `review_attempts` |
 | Reliability | `outbox_events`, `idempotency_records` |
 
@@ -39,6 +39,14 @@ catalog, bilingual seed, and execution ledger. V17–V19 implement Planner table
 planner-owned sessions, and short bilingual task variants. V20 widens the
 `user_goals.default_daily_minutes` CHECK from 30–180 to 20–180 without rewriting V2
 or existing Goal rows.
+V21–V23 add the Phase 7 evidence/review handoff and objective task-check schema.
+V24 extends Planner-owned replan requests with a reclaimable lease, attempt
+count, safe error/result codes, and a plan-result FK. A request is `PROCESSING`
+only while all lease fields are present; a failed execution keeps the request
+retryable or terminal without mutating a plan. V25 adds `planner-v2`, immutable
+carry-forward references, day-local override audit, and a nullable source event
+only for Planner-owned time-override requests. The worker and task-check rollout
+gates remain disabled until the complete learner flow is verified.
 
 Flyway history at the Phase 1 boundary:
 
@@ -62,6 +70,9 @@ Flyway history at the Phase 1 boundary:
 | V16 | Learner-owned pinned sessions/tasks, generated active-goal uniqueness, lifecycle audit, and idempotency receipts |
 | V17–V19 | Planner snapshots/decisions/plans, planner-assigned Learning sessions, and four-root short content coverage |
 | V20 | Replace the Goal daily-budget CHECK with 20–180 (`goal-daily-budget-v2`) |
+| V21–V23 | Phase 7 event receipts, objective task checks, and narrow authored content |
+| V24 | Leases, bounded retry/result fields, and an index for Planner replan requests; existing pending rows remain eligible |
+| V25 | `planner-v2`, immutable carry-forward links, day-local override audit, and Planner-owned override trigger identity |
 
 V4 and V5 intentionally demonstrate the forward-fix rule: an applied migration was
 not rewritten after integration validation exposed a mismatch/context conflict.

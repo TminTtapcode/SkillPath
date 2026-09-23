@@ -24,11 +24,16 @@ public class JdbcPlannerStore implements PlannerStore {
         return first(jdbc.query(planSql()+" WHERE p.user_id=? AND p.goal_id=? AND p.learning_day=? "
                         +"AND p.status IN ('CURRENT','NO_SAFE')",this::planRow,userId,goalId,day));
     }
+    @Override public Optional<PlanRow> latestBefore(long userId,long goalId,LocalDate day){
+        return first(jdbc.query(planSql()+" WHERE p.user_id=? AND p.goal_id=? AND p.learning_day<? "
+                        +"ORDER BY p.learning_day DESC,p.revision DESC LIMIT 1",
+                this::planRow,userId,goalId,day));
+    }
     @Override public Optional<PlanRow> plan(long userId,long planId){
         return first(jdbc.query(planSql()+" WHERE p.user_id=? AND p.id=?",this::planRow,userId,planId));
     }
     private String planSql(){return "SELECT p.id,p.user_id,p.goal_id,p.learning_day,p.timezone,p.budget_minutes,"
-            +"p.revision,p.session_id,p.status,p.outcome_code,s.graph_version_id,s.projection_as_of,"
+            +"p.revision,p.session_id,p.status,p.outcome_code,s.policy_version,s.graph_version_id,s.projection_as_of,"
             +"s.progress_digest,s.review_digest,s.input_payload FROM daily_plans p "
             +"JOIN planning_snapshots s ON s.id=p.snapshot_id";}
     private PlanRow planRow(java.sql.ResultSet rs,int row)throws java.sql.SQLException{
@@ -37,7 +42,8 @@ public class JdbcPlannerStore implements PlannerStore {
         return new PlanRow(rs.getLong("id"),rs.getLong("user_id"),rs.getLong("goal_id"),
                 rs.getObject("learning_day",LocalDate.class),rs.getString("timezone"),
                 rs.getInt("budget_minutes"),rs.getInt("revision"),absentSession?null:session,
-                rs.getString("status"),rs.getString("outcome_code"),rs.getLong("graph_version_id"),
+                rs.getString("status"),rs.getString("outcome_code"),rs.getString("policy_version"),
+                rs.getLong("graph_version_id"),
                 rs.getTimestamp("projection_as_of").toInstant(),rs.getString("progress_digest"),
                 rs.getString("review_digest"),rs.getString("input_payload"));
     }
@@ -46,13 +52,13 @@ public class JdbcPlannerStore implements PlannerStore {
                         +"WHERE user_id=? AND idempotency_key=?",
                 (rs,row)->new Receipt(rs.getString(1),rs.getString(2),rs.getLong(3)),userId,key));
     }
-    @Override public long snapshot(long userId,long goalId,long graphVersionId,Instant asOf,
+    @Override public long snapshot(long userId,long goalId,long graphVersionId,String policyVersion,Instant asOf,
             String progressDigest,String reviewDigest,String inputHash,String inputPayload,
             int candidateCount,int limitedCount){
         return insert("INSERT INTO planning_snapshots(user_id,goal_id,graph_version_id,policy_version,"
                         +"projection_as_of,progress_digest,review_digest,input_hash,input_payload,"
-                        +"candidate_count,limited_candidate_count,created_at) VALUES(?,?,?,'planner-v1',?,?,?,?,?,?,?,?)",
-                userId,goalId,graphVersionId,Timestamp.from(asOf),progressDigest,reviewDigest,
+                        +"candidate_count,limited_candidate_count,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                userId,goalId,graphVersionId,policyVersion,Timestamp.from(asOf),progressDigest,reviewDigest,
                 inputHash,inputPayload,candidateCount,limitedCount,Timestamp.from(asOf));
     }
     @Override public long decision(long snapshotId,PlannerPolicyV1.Choice choice,
@@ -90,6 +96,13 @@ public class JdbcPlannerStore implements PlannerStore {
         jdbc.update("INSERT INTO daily_plan_items(plan_id,position,decision_id,learning_task_id,estimated_minutes) "
                 +"VALUES(?,?,?,?,?)",planId,position,decisionId,taskId,minutes);
     }
+    @Override public void addCarry(long planId,int position,TaskRef origin,String status,Integer actualMinutes){
+        jdbc.update("INSERT INTO daily_plan_carry_forwards(plan_id,position,origin_plan_id,"
+                        +"origin_decision_id,learning_session_id,learning_task_id,status_at_revision,"
+                        +"planned_minutes,actual_minutes_at_revision) VALUES(?,?,?,?,?,?,?,?,?)",
+                planId,position,origin.originPlanId(),origin.decisionId(),origin.sessionId(),
+                origin.taskId(),status,origin.minutes(),actualMinutes);
+    }
     @Override public void supersede(long planId){
         if(jdbc.update("UPDATE daily_plans SET status='SUPERSEDED' WHERE id=? AND status IN ('CURRENT','NO_SAFE')",
                 planId)!=1)throw new IllegalStateException("Planner revision changed concurrently");
@@ -105,6 +118,23 @@ public class JdbcPlannerStore implements PlannerStore {
                         +"JOIN planner_decisions d ON d.id=i.decision_id WHERE i.plan_id=? ORDER BY i.position",
                 (rs,row)->new ItemRow(rs.getInt(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),
                         rs.getLong(5),rs.getInt(6),rs.getBigDecimal(7),rs.getString(8)),planId);
+    }
+    @Override public List<TaskRef> taskRefs(long planId){
+        return jdbc.query("SELECT r.learning_task_id,r.origin_plan_id,r.origin_decision_id,"
+                        +"r.learning_session_id,r.position,d.node_id,d.template_version_id,"
+                        +"r.planned_minutes,d.priority_score,d.reason_payload,r.carried FROM ("
+                        +"SELECT i.learning_task_id,p.id AS origin_plan_id,i.decision_id AS origin_decision_id,"
+                        +"p.session_id AS learning_session_id,i.position,i.estimated_minutes AS planned_minutes,"
+                        +"FALSE AS carried FROM daily_plan_items i JOIN daily_plans p ON p.id=i.plan_id "
+                        +"WHERE i.plan_id=? UNION ALL "
+                        +"SELECT c.learning_task_id,c.origin_plan_id,c.origin_decision_id,"
+                        +"c.learning_session_id,c.position,c.planned_minutes,TRUE AS carried "
+                        +"FROM daily_plan_carry_forwards c WHERE c.plan_id=?) r "
+                        +"JOIN planner_decisions d ON d.id=r.origin_decision_id "
+                        +"ORDER BY r.carried DESC,r.position",
+                (rs,row)->new TaskRef(rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),
+                        rs.getInt(5),rs.getLong(6),rs.getLong(7),rs.getInt(8),rs.getBigDecimal(9),
+                        rs.getString(10),rs.getBoolean(11)),planId,planId);
     }
     private long insert(String sql,Object...args){
         GeneratedKeyHolder keys=new GeneratedKeyHolder();

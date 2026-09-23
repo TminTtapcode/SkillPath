@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import {
   ApiError,
   generateTodayPlan,
+  getTodayReplanStatus,
   getTodayPlan,
+  overrideTodayMinutes,
+  refreshTodayPlan,
   reviseTodayPlan,
   type TodayPlan,
 } from '../../shared/api/client'
@@ -28,17 +31,34 @@ export function TodayPage() {
   const { locale, t } = useI18n()
   const queryClient = useQueryClient()
   const retryKey = useRef<string | null>(null)
+  const overrideKey = useRef<string | null>(null)
+  const [availableMinutes, setAvailableMinutes] = useState('')
   const query = useQuery({
     queryKey: ['today', locale],
     queryFn: getTodayPlan,
     retry: false,
   })
+  const replan = useQuery({
+    queryKey: ['today-replan-status'],
+    queryFn: getTodayReplanStatus,
+    retry: false,
+    refetchInterval: (state) =>
+      ['PENDING', 'PROCESSING'].includes(state.state.data?.status ?? '')
+        ? 5000
+        : false,
+  })
+  useEffect(() => {
+    if (replan.data?.status === 'COMPLETED') {
+      void queryClient.invalidateQueries({ queryKey: ['today'] })
+      void queryClient.invalidateQueries({ queryKey: ['roadmap'] })
+    }
+  }, [queryClient, replan.data?.status])
   const command = useMutation({
-    mutationFn: (action: 'generate' | 'revise') => {
+    mutationFn: (action: 'generate' | 'revise' | 'refresh') => {
       retryKey.current ??= crypto.randomUUID()
-      return action === 'generate'
-        ? generateTodayPlan(retryKey.current)
-        : reviseTodayPlan(retryKey.current)
+      if (action === 'generate') return generateTodayPlan(retryKey.current)
+      if (action === 'revise') return reviseTodayPlan(retryKey.current)
+      return refreshTodayPlan(retryKey.current)
     },
     onSuccess: (plan) => {
       retryKey.current = null
@@ -50,6 +70,21 @@ export function TodayPage() {
         retryKey.current = null
         void query.refetch()
       }
+    },
+  })
+  const override = useMutation({
+    mutationFn: (minutes: number) => {
+      overrideKey.current ??= crypto.randomUUID()
+      return overrideTodayMinutes(minutes, overrideKey.current)
+    },
+    onSuccess: () => {
+      overrideKey.current = null
+      void replan.refetch()
+      void query.refetch()
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409)
+        overrideKey.current = null
     },
   })
 
@@ -71,10 +106,12 @@ export function TodayPage() {
   if (query.error) return <ErrorNotice error={query.error} />
 
   const plan = query.data as TodayPlan
-  const notGenerated = plan.outcome === 'NOT_GENERATED'
+  const refreshRequired = plan.outcome === 'REFRESH_REQUIRED'
+  const notGenerated = plan.outcome === 'NOT_GENERATED' || refreshRequired
   const canRevise =
     Boolean(plan.planId) &&
-    plan.items.every((item) => item.status === 'ASSIGNED')
+    plan.items.every((item) => item.status === 'ASSIGNED') &&
+    plan.plannerPolicyVersion === 'planner-v1'
   const errorCode =
     command.error instanceof ApiError ? command.error.problem?.code : undefined
   const totalPlannedMinutes = plan.items.reduce(
@@ -110,35 +147,51 @@ export function TodayPage() {
             </Link>
           </div>
         </div>
-        {plan.budgetMinutes > 0 && (
-          <div className="budget-meter-wrap">
-            <div
-              className="budget-meter-track"
-              role="progressbar"
-              aria-valuenow={totalPlannedMinutes}
-              aria-valuemin={0}
-              aria-valuemax={plan.budgetMinutes}
-              aria-label={t('planner.budget', { minutes: plan.budgetMinutes })}
-            >
+        {plan.budgetMinutes > 0 &&
+          plan.plannerPolicyVersion !== 'planner-v2' && (
+            <div className="budget-meter-wrap">
               <div
-                className="budget-meter-fill"
-                style={{ width: `${budgetPercent}%` }}
-              />
+                className="budget-meter-track"
+                role="progressbar"
+                aria-valuenow={totalPlannedMinutes}
+                aria-valuemin={0}
+                aria-valuemax={plan.budgetMinutes}
+                aria-label={t('planner.budget', {
+                  minutes: plan.budgetMinutes,
+                })}
+              >
+                <div
+                  className="budget-meter-fill"
+                  style={{ width: `${budgetPercent}%` }}
+                />
+              </div>
+              <div className="budget-meter-caption">
+                <span>{totalPlannedMinutes} min allocated</span>
+                <span>
+                  {plan.budgetMinutes - totalPlannedMinutes} min remaining
+                </span>
+              </div>
             </div>
-            <div className="budget-meter-caption">
-              <span>{totalPlannedMinutes} min allocated</span>
-              <span>
-                {plan.budgetMinutes - totalPlannedMinutes} min remaining
-              </span>
-            </div>
-          </div>
-        )}
+          )}
       </div>
 
       {notGenerated && (
         <div className="today-empty-prompt">
-          <p className="notice">{t('planner.empty')}</p>
+          <p className="notice">
+            {t(refreshRequired ? 'planner.refreshNeeded' : 'planner.empty')}
+          </p>
         </div>
+      )}
+
+      {['PENDING', 'PROCESSING'].includes(replan.data?.status ?? '') && (
+        <p className="notice" role="status">
+          {t('planner.replanPending')}
+        </p>
+      )}
+      {replan.data?.status === 'FAILED' && (
+        <p className="notice notice-error" role="alert">
+          {t('planner.replanFailed')}
+        </p>
       )}
 
       {plan.activeManualSessionId && (
@@ -179,6 +232,9 @@ export function TodayPage() {
                       ? t(statusKeys[item.status])
                       : item.status}
                   </span>
+                  {item.carried && (
+                    <span className="status-badge">{t('planner.carried')}</span>
+                  )}
                 </div>
                 <h2>{item.title}</h2>
                 <div className="task-reason-box">
@@ -196,13 +252,15 @@ export function TodayPage() {
           </ol>
 
           <div className="today-summary-footer">
-            <p>
-              {t('planner.remaining', {
-                minutes:
-                  plan.budgetMinutes -
-                  plan.items.reduce((sum, item) => sum + item.minutes, 0),
-              })}
-            </p>
+            {plan.plannerPolicyVersion !== 'planner-v2' && (
+              <p>
+                {t('planner.remaining', {
+                  minutes:
+                    plan.budgetMinutes -
+                    plan.items.reduce((sum, item) => sum + item.minutes, 0),
+                })}
+              </p>
+            )}
             {plan.alternatives.length > 0 && (
               <p>
                 {t('planner.alternatives')}: {plan.alternatives.join(', ')}
@@ -248,7 +306,9 @@ export function TodayPage() {
             type="button"
             className="today-generate-btn"
             disabled={command.isPending}
-            onClick={() => command.mutate('generate')}
+            onClick={() =>
+              command.mutate(refreshRequired ? 'refresh' : 'generate')
+            }
           >
             <svg
               aria-hidden="true"
@@ -261,7 +321,9 @@ export function TodayPage() {
             >
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
-            <span>{t('planner.generate')}</span>
+            <span>
+              {t(refreshRequired ? 'planner.refresh' : 'planner.generate')}
+            </span>
           </button>
         ) : (
           canRevise &&
@@ -278,6 +340,30 @@ export function TodayPage() {
         )}
         {command.isPending && <span role="status">{t('planner.pending')}</span>}
       </div>
+      {replan.data?.automaticReplanEnabled && <form
+        className="planner-actions"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const minutes = Number(availableMinutes)
+          if (Number.isInteger(minutes) && minutes >= 1 && minutes <= 180)
+            override.mutate(minutes)
+        }}
+      >
+        <label htmlFor="today-available-minutes">{t('planner.override')}</label>
+        <input
+          id="today-available-minutes"
+          type="number"
+          min={1}
+          max={180}
+          required
+          value={availableMinutes}
+          onChange={(event) => setAvailableMinutes(event.target.value)}
+        />
+        <button type="submit" disabled={override.isPending}>
+          {t('planner.overrideSave')}
+        </button>
+        {override.error && <ErrorNotice error={override.error} />}
+      </form>}
       <div className="page-footer-nav">
         <Link to="/goal">{t('common.returnGoal')}</Link>
       </div>

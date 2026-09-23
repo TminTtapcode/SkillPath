@@ -93,6 +93,111 @@ describe('Phase 6 Today and roadmap', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows pending replan and explicitly refreshes a missed local day', async () => {
+    const calls: Array<{ url: string; method: string; key: string | null }> = []
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      calls.push({
+        url,
+        method: init?.method ?? 'GET',
+        key: new Headers(init?.headers).get('Idempotency-Key'),
+      })
+      if (url.endsWith('/auth/csrf'))
+        return response({
+          headerName: 'X-XSRF-TOKEN',
+          parameterName: '_csrf',
+          token: 'test',
+        })
+      if (url.endsWith('/replan-status'))
+        return response({
+          learningDay: '2026-09-23',
+          status: 'PENDING',
+          attempts: 0,
+        })
+      if (url.endsWith('/learning/today/refresh'))
+        return response({
+          ...planned,
+          plannerPolicyVersion: 'planner-v2',
+          items: [
+            { ...planned.items[0], carried: true, status: 'IN_PROGRESS' },
+          ],
+        })
+      if (url.endsWith('/learning/today'))
+        return response({ ...empty, outcome: 'REFRESH_REQUIRED' })
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    window.history.pushState({}, '', '/today')
+    render(<App />)
+    expect(
+      await screen.findByText(/new local day needs an explicit refresh/i),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(/new plan is pending or retrying/i),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh for today' }))
+    expect(
+      await screen.findByText('Kept from an earlier plan'),
+    ).toBeInTheDocument()
+    expect(
+      calls.filter((call) => call.url.endsWith('/learning/today/refresh')),
+    ).toEqual([
+      expect.objectContaining({ method: 'POST', key: expect.any(String) }),
+    ])
+  })
+
+  it('submits a bounded day override with CSRF and a stable command key', async () => {
+    const writes: Array<{
+      method: string
+      key: string | null
+      body: string | undefined
+    }> = []
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/auth/csrf'))
+        return response({
+          headerName: 'X-XSRF-TOKEN',
+          parameterName: '_csrf',
+          token: 'test',
+        })
+      if (url.endsWith('/replan-status'))
+        return response({
+          learningDay: '2026-09-23',
+          status: 'NONE',
+          attempts: 0,
+          automaticReplanEnabled: true,
+        })
+      if (url.endsWith('/learning/today/available-minutes')) {
+        writes.push({
+          method: init?.method ?? 'GET',
+          key: new Headers(init?.headers).get('Idempotency-Key'),
+          body: init?.body as string | undefined,
+        })
+        return response({
+          learningDay: '2026-09-23',
+          availableMinutes: 30,
+          revision: 1,
+          replayed: false,
+        })
+      }
+      if (url.endsWith('/learning/today')) return response(planned)
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    window.history.pushState({}, '', '/today')
+    render(<App />)
+    fireEvent.change(await screen.findByLabelText('Available minutes today'), {
+      target: { value: '30' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Update time and request a replan' }),
+    )
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0]).toEqual({
+      method: 'PUT',
+      key: expect.any(String),
+      body: '{"availableMinutes":30}',
+    })
+  })
+
   it('shows a semantic concept list and prerequisite direction', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       if (String(input).endsWith('/roadmap'))
@@ -160,6 +265,12 @@ describe('Phase 6 Today and roadmap', () => {
       requests.push(String(input))
       if (String(input).endsWith('/learning/today'))
         return response({ ...empty, activeManualSessionId: '42' })
+      if (String(input).endsWith('/learning/today/replan-status'))
+        return response({
+          learningDay: '2026-09-23',
+          status: 'NONE',
+          attempts: 0,
+        })
       throw new Error(`Unexpected request: ${String(input)}`)
     })
     window.history.pushState({}, '', '/today')
@@ -167,7 +278,10 @@ describe('Phase 6 Today and roadmap', () => {
     expect(
       await screen.findByRole('link', { name: 'Open assigned session' }),
     ).toHaveAttribute('href', '/learning/session/42')
-    expect(requests).toEqual([expect.stringMatching(/\/learning\/today$/)])
+    expect(requests).toEqual([
+      expect.stringMatching(/\/learning\/today$/),
+      expect.stringMatching(/\/learning\/today\/replan-status$/),
+    ])
   })
 
   it('explains a no-content plan without inventing a task', async () => {

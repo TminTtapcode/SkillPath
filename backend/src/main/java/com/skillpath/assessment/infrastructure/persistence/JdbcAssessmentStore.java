@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillpath.assessment.application.AssessmentStore;
+import com.skillpath.assessment.application.TaskCheckHistoryQueries;
 import com.skillpath.assessment.domain.KnowledgeDimension;
 import com.skillpath.assessment.domain.ObjectiveQuestion;
 import com.skillpath.assessment.domain.ObjectiveScoringPolicyV1;
@@ -307,10 +308,12 @@ class JdbcAssessmentStore implements AssessmentStore {
                 selfConfidence,
                 timeSpentSeconds,
                 evaluation.score(),
-                submittedAt);
+                submittedAt, ObjectiveScoringPolicyV1.VERSION);
         for (ObjectiveScoringPolicyV1.Evidence evidence : evaluation.evidence()) {
-            long evidenceId = insertEvidence(attemptId, session.graphVersionId(), evidence, submittedAt);
-            insertOutbox(session, attemptId, evidenceId, evidence, submittedAt);
+            long evidenceId = insertEvidence(attemptId, session.graphVersionId(), evidence, submittedAt,
+                    ObjectiveScoringPolicyV1.VERSION);
+            insertOutbox(session, attemptId, evidenceId, evidence, submittedAt,"DIAGNOSTIC",
+                    evaluation.evidence().size(),false,ObjectiveScoringPolicyV1.VERSION);
         }
         return findAttemptByIdempotency(userId, session.id(), idempotencyKey).orElseThrow();
     }
@@ -325,7 +328,7 @@ class JdbcAssessmentStore implements AssessmentStore {
             BigDecimal selfConfidence,
             int timeSpentSeconds,
             BigDecimal rawScore,
-            Instant submittedAt) {
+            Instant submittedAt, String evaluatorVersion) {
         KeyHolder keys = new GeneratedKeyHolder();
         String payload = writeJson(Map.of("selectedOptionIds", selectedOptionIds));
         jdbcTemplate.update(connection -> {
@@ -347,7 +350,7 @@ class JdbcAssessmentStore implements AssessmentStore {
             statement.setBigDecimal(7, rawScore);
             statement.setBigDecimal(8, selfConfidence);
             statement.setInt(9, timeSpentSeconds);
-            statement.setString(10, ObjectiveScoringPolicyV1.VERSION);
+            statement.setString(10, evaluatorVersion);
             statement.setTimestamp(11, Timestamp.from(submittedAt));
             return statement;
         }, keys);
@@ -361,7 +364,7 @@ class JdbcAssessmentStore implements AssessmentStore {
             long attemptId,
             long graphVersionId,
             ObjectiveScoringPolicyV1.Evidence evidence,
-            Instant createdAt) {
+            Instant createdAt, String evaluatorVersion) {
         KeyHolder keys = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement statement = connection.prepareStatement(
@@ -379,7 +382,7 @@ class JdbcAssessmentStore implements AssessmentStore {
             statement.setString(4, evidence.dimension().name());
             statement.setBigDecimal(5, evidence.score());
             statement.setBigDecimal(6, evidence.reliability());
-            statement.setString(7, ObjectiveScoringPolicyV1.VERSION);
+            statement.setString(7, evaluatorVersion);
             statement.setString(8, "Objective answer evaluated by versioned deterministic policy.");
             statement.setTimestamp(9, Timestamp.from(createdAt));
             return statement;
@@ -395,7 +398,8 @@ class JdbcAssessmentStore implements AssessmentStore {
             long attemptId,
             long evidenceId,
             ObjectiveScoringPolicyV1.Evidence evidence,
-            Instant occurredAt) {
+            Instant occurredAt, String attemptKind, int expectedEvidenceCount,
+            boolean replanEligible, String evaluatorVersion) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("evidenceId", Long.toString(evidenceId));
         payload.put("attemptId", Long.toString(attemptId));
@@ -406,23 +410,27 @@ class JdbcAssessmentStore implements AssessmentStore {
         payload.put("dimension", evidence.dimension().name());
         payload.put("score", evidence.score());
         payload.put("reliability", evidence.reliability());
-        payload.put("evaluatorVersion", ObjectiveScoringPolicyV1.VERSION);
+        payload.put("evaluatorVersion", evaluatorVersion);
         payload.put("evaluatorType", "DETERMINISTIC");
-        payload.put("assessmentPurpose", "DIAGNOSTIC");
+        payload.put("assessmentPurpose", attemptKind.equals("DIAGNOSTIC") ? "DIAGNOSTIC" : "PRACTICE");
+        payload.put("attemptKind",attemptKind);
+        payload.put("expectedEvidenceCount",expectedEvidenceCount);
+        payload.put("replanEligible",replanEligible);
         payload.put("misconceptionCodes", List.of());
         payload.put("policyVersion", session.policyVersion());
         payload.put("observedAt", occurredAt.toString());
         jdbcTemplate.update(
                 """
                 INSERT INTO outbox_events (
-                    event_key, owner_module, aggregate_type, aggregate_id, event_type,
+                    event_key, owner_module, aggregate_type, aggregate_id, event_type,event_version,
                     payload, status, attempt_count, available_at, occurred_at, published_at,
                     created_at, updated_at)
-                VALUES (?, 'assessment', 'AttemptEvidence', ?, 'AssessmentEvidenceCreated',
+                VALUES (?, 'assessment', 'AttemptEvidence', ?, 'AssessmentEvidenceCreated',?,
                         CAST(? AS JSON), 'PENDING', 0, ?, ?, NULL, ?, ?)
                 """,
                 "assessment-evidence:" + evidenceId,
                 Long.toString(evidenceId),
+                attemptKind.equals("TASK_CHECK") ? 2 : 1,
                 writeJson(payload),
                 Timestamp.from(occurredAt),
                 Timestamp.from(occurredAt),
@@ -475,6 +483,99 @@ class JdbcAssessmentStore implements AssessmentStore {
                         resultSet.getTimestamp("created_at").toInstant()),
                 sessionId);
         return new ResultRecord(answered, total, overall == null ? BigDecimal.ZERO : overall, evidence);
+    }
+
+    @Override
+    public Optional<TaskCheckDefinition> taskCheck(long templateVersionId, long graphVersionId) {
+        return jdbcTemplate.query("""
+                SELECT d.task_template_version_id,d.graph_version_id,d.question_version_id,d.evaluator_version
+                FROM task_check_definitions d
+                JOIN question_versions q ON q.id=d.question_version_id
+                WHERE d.task_template_version_id=? AND d.graph_version_id=?
+                  AND q.scoring_strategy='EXACT'
+                  AND q.type IN ('SINGLE_CHOICE','MULTIPLE_CHOICE')
+                  AND EXISTS (SELECT 1 FROM question_knowledge m
+                              WHERE m.question_version_id=d.question_version_id
+                                AND m.graph_version_id=d.graph_version_id
+                                AND m.dimension IN ('RECOGNITION','UNDERSTANDING'))
+                  AND NOT EXISTS (SELECT 1 FROM question_knowledge m
+                                  WHERE m.question_version_id=d.question_version_id
+                                    AND (m.graph_version_id<>d.graph_version_id
+                                         OR m.dimension NOT IN ('RECOGNITION','UNDERSTANDING')))
+                """, (rs, row) -> new TaskCheckDefinition(rs.getLong(1),rs.getLong(2),rs.getString(4),
+                        loadQuestion(rs.getLong(3))), templateVersionId, graphVersionId).stream().findFirst();
+    }
+
+    @Override
+    public Optional<TaskCheckSubmission> taskCheckSubmission(long taskId, long userId) {
+        return jdbcTemplate.query("""
+                SELECT aa.id,aa.idempotency_key,aa.request_hash,aa.raw_score
+                FROM task_check_submissions s
+                JOIN answer_attempts aa ON aa.id=s.answer_attempt_id
+                WHERE s.learning_task_id=? AND s.user_id=?
+                """, (rs,row)->new TaskCheckSubmission(rs.getLong(1),rs.getString(2),
+                        rs.getString(3),rs.getBigDecimal(4)),taskId,userId).stream().findFirst();
+    }
+
+    @Override
+    public List<TaskCheckHistoryQueries.FailureObservation> recentTaskChecks(long userId,long goalId,
+                                                                              long graphVersionId,Instant asOf) {
+        return jdbcTemplate.query("""
+                SELECT s.answer_attempt_id,s.task_template_version_id,aa.raw_score
+                FROM task_check_submissions s
+                JOIN answer_attempts aa ON aa.id=s.answer_attempt_id
+                WHERE s.user_id=? AND s.goal_id=? AND s.graph_version_id=? AND s.submitted_at<=?
+                ORDER BY s.submitted_at DESC,s.answer_attempt_id DESC LIMIT 2000
+                """,(rs,row)->new TaskCheckHistoryQueries.FailureObservation(rs.getLong(1),
+                        rs.getLong(2),rs.getBigDecimal(3)),userId,goalId,graphVersionId,Timestamp.from(asOf));
+    }
+
+    @Override
+    public TaskCheckSubmission saveTaskCheck(long taskId,long userId,long goalId,
+                                             TaskCheckDefinition definition,String idempotencyKey,
+                                             String requestHash,List<String> selectedOptionIds,
+                                             int timeSpentSeconds,ObjectiveScoringPolicyV1.Evaluation evaluation,
+                                             Instant now) {
+        long sessionId = insertGenerated("""
+                INSERT INTO assessment_sessions(user_id,goal_id,purpose,status,graph_version_id,
+                    assessment_policy_version,started_at,expires_at,completed_at,version,created_at,updated_at)
+                VALUES(?,?,'PRACTICE','COMPLETED',?,?,?, ?,?,0,?,?)
+                """,userId,goalId,definition.graphVersionId(),definition.evaluatorVersion(),
+                Timestamp.from(now),Timestamp.from(now.plusSeconds(7*86400L)),Timestamp.from(now),
+                Timestamp.from(now),Timestamp.from(now));
+        long sessionQuestionId=insertGenerated("""
+                INSERT INTO assessment_session_questions(session_id,question_version_id,position,created_at)
+                VALUES(?,?,1,?)
+                """,sessionId,definition.question().versionId(),Timestamp.from(now));
+        SessionRecord session=findOwnedSession(sessionId,userId).orElseThrow();
+        SessionQuestionRecord sessionQuestion=new SessionQuestionRecord(sessionQuestionId,sessionId,1,definition.question());
+        long attemptId=insertAttempt(session,sessionQuestion,userId,idempotencyKey,requestHash,
+                selectedOptionIds,null,timeSpentSeconds,evaluation.score(),now,
+                definition.evaluatorVersion());
+        for(ObjectiveScoringPolicyV1.Evidence evidence:evaluation.evidence()){
+            long evidenceId=insertEvidence(attemptId,definition.graphVersionId(),evidence,now,
+                    definition.evaluatorVersion());
+            insertOutbox(session,attemptId,evidenceId,evidence,now,"TASK_CHECK",evaluation.evidence().size(),
+                    true,definition.evaluatorVersion());
+        }
+        jdbcTemplate.update("""
+                INSERT INTO task_check_submissions(learning_task_id,user_id,goal_id,graph_version_id,
+                    assessment_session_id,answer_attempt_id,task_template_version_id,submitted_at)
+                VALUES(?,?,?,?,?,?,?,?)
+                """,taskId,userId,goalId,definition.graphVersionId(),sessionId,attemptId,
+                definition.templateVersionId(),Timestamp.from(now));
+        return new TaskCheckSubmission(attemptId,idempotencyKey,requestHash,evaluation.score());
+    }
+
+    private long insertGenerated(String sql,Object... values){
+        KeyHolder keys=new GeneratedKeyHolder();
+        jdbcTemplate.update(connection->{
+            PreparedStatement statement=connection.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS);
+            for(int i=0;i<values.length;i++)statement.setObject(i+1,values[i]);
+            return statement;
+        },keys);
+        if(keys.getKey()==null)throw new IllegalStateException("Assessment row was not created");
+        return keys.getKey().longValue();
     }
 
     private ObjectiveQuestion loadQuestion(long versionId) {

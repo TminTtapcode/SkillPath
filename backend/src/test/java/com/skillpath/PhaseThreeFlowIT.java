@@ -16,6 +16,8 @@ import com.skillpath.progress.application.AssessmentEvidenceHandler;
 import com.skillpath.shared.application.OutboxHandler.OutboxEvent;
 import jakarta.servlet.http.Cookie;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -155,6 +157,19 @@ class PhaseThreeFlowIT {
                 .andExpect(header().string(HttpHeaders.CONTENT_LANGUAGE, "vi-VN"))
                 .andExpect(jsonPath("$.items[0].evidenceCount").value(1))
                 .andExpect(jsonPath("$.items[0].policyVersion").value("knowledge-state-v1"));
+
+        long[] stateKey = jdbcTemplate.queryForObject(
+                "SELECT user_id,graph_version_id,knowledge_node_id FROM user_knowledge LIMIT 1",
+                (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2), rs.getLong(3)});
+        Instant scheduleDueAt = Instant.parse("2026-12-01T12:00:00Z");
+        Timestamp now = Timestamp.from(Instant.now());
+        jdbcTemplate.update("UPDATE user_knowledge SET next_review_at=? WHERE user_id=? AND knowledge_node_id=?",
+                Timestamp.from(Instant.parse("2020-01-01T00:00:00Z")), stateKey[0], stateKey[2]);
+        jdbcTemplate.update("INSERT INTO review_schedules(user_id,graph_version_id,knowledge_node_id,policy_version,interval_index,due_at,status,version,created_at,updated_at) VALUES(?,?,?,'review-interval-v1',0,?,'SCHEDULED',0,?,?)",
+                stateKey[0], stateKey[1], stateKey[2], Timestamp.from(scheduleDueAt), now, now);
+        mockMvc.perform(get("/api/v1/knowledge/me/{nodeId}", stateKey[2]).cookie(learner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nextReviewAt").value(scheduleDueAt.toString()));
 
         mockMvc.perform(post("/api/v1/assessments/{sessionId}/attempts", sessionId)
                         .cookie(learner)

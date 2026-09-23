@@ -41,15 +41,16 @@ public class PlannerService {
     private final PlannerReviewQueries review;
     private final LearningQueries learning;
     private final PlannerStore store;
+    private final PlannerDayStore days;
     private final ObjectMapper json;
     private final Clock clock;
     private final PlannerPolicyV1 policy=new PlannerPolicyV1();
 
     public PlannerService(GoalQueries goals,PlannerKnowledgeQueries knowledge,
             PlannerProgressQueries progress,PlannerReviewQueries review,LearningQueries learning,
-            PlannerStore store,ObjectMapper json,Clock clock){
+            PlannerStore store,PlannerDayStore days,ObjectMapper json,Clock clock){
         this.goals=goals;this.knowledge=knowledge;this.progress=progress;this.review=review;
-        this.learning=learning;this.store=store;this.json=json;this.clock=clock;
+        this.learning=learning;this.store=store;this.days=days;this.json=json;this.clock=clock;
     }
 
     @Transactional(isolation=Isolation.REPEATABLE_READ)
@@ -66,6 +67,8 @@ public class PlannerService {
         var goal=goals.planningGoalForUser(userId,true);
         Instant now=clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         LocalDate day=now.atZone(ZoneId.of(goal.timezone())).toLocalDate();
+        int dailyMinutes=days.latestOverride(userId,goal.id(),day)
+                .map(PlannerDayStore.OverrideRow::minutes).orElse(goal.defaultDailyMinutes());
         PlannerStore.Receipt prior=store.receipt(userId,key).orElse(null);
         if(prior!=null)return replay(userId,prior,command,hash,locale);
         PlannerStore.PlanRow existing=store.current(userId,goal.id(),day).orElse(null);
@@ -86,10 +89,11 @@ public class PlannerService {
             learning.supersedeUnstarted(userId,existing.sessionId(),now);
         }
         if(revision)store.supersede(existing.id());
-        SnapshotInput snapshot=load(goal.goalTemplateId(),userId,goal.defaultDailyMinutes(),now);
-        PlannerPolicyV1.Result result=policy.plan(toPolicy(snapshot,goal.defaultDailyMinutes()));
+        SnapshotInput snapshot=load(goal.goalTemplateId(),userId,dailyMinutes,now);
+        PlannerPolicyV1.Result result=policy.plan(toPolicy(snapshot,dailyMinutes));
         String payload=encode(snapshot);
-        long snapshotId=store.snapshot(userId,goal.id(),snapshot.graph().graphVersionId(),now,
+        long snapshotId=store.snapshot(userId,goal.id(),snapshot.graph().graphVersionId(),
+                PlannerPolicyV1.VERSION,now,
                 snapshot.progress().digest(),snapshot.review().digest(),digest(payload),payload,
                 result.candidateCount(),result.limitedCount());
         store.candidates(snapshotId,result.topCandidates(),result.blockedBy());
@@ -104,7 +108,7 @@ public class PlannerService {
         }
         Long sessionId=selected.isEmpty()?null:learning.assignPlanner(userId,goal.id(),
                 snapshot.graph().graphVersionId(),selected,now);
-        long planId=store.createPlan(userId,goal.id(),day,goal.timezone(),goal.defaultDailyMinutes(),
+        long planId=store.createPlan(userId,goal.id(),day,goal.timezone(),dailyMinutes,
                 existing==null?1:existing.revision()+1,existing==null?null:existing.id(),
                 snapshotId,sessionId,result.outcome(),now);
         if(sessionId!=null){
@@ -138,7 +142,11 @@ public class PlannerService {
         var active=learning.activeAssignment(userId,goal.id());
         String manual=active!=null && active.assignmentSource().equals("LEARNER_SELECTED")
                 ?Long.toString(active.id()):null;
-        if(current==null)return new TodayView(null,"NOT_GENERATED",null,0,goal.defaultDailyMinutes(),
+        int available=days.latestOverride(userId,goal.id(),day)
+                .map(PlannerDayStore.OverrideRow::minutes).orElse(goal.defaultDailyMinutes());
+        if(current==null)return new TodayView(null,
+                store.latestBefore(userId,goal.id(),day).isPresent()?"REFRESH_REQUIRED":"NOT_GENERATED",
+                null,0,available,
                 null,null,null,null,manual,List.of(),List.of());
         TodayView plan=view(userId,current,locale);
         return new TodayView(plan.planId(),plan.outcome(),plan.reasonCode(),plan.revision(),plan.budgetMinutes(),
@@ -153,28 +161,36 @@ public class PlannerService {
                 HttpStatus.NOT_FOUND,"TODAY_PLAN_NOT_FOUND","Plan was not found.")),locale);
     }
 
-    private TodayView view(long userId,PlannerStore.PlanRow row,SupportedLocale locale){
-        SnapshotInput snapshot=decode(row.inputPayload());
+    TodayView view(long userId,PlannerStore.PlanRow row,SupportedLocale locale){
+        SnapshotInput snapshot=baseSnapshot(row);
         Map<Long,PlannerKnowledgeQueries.Node> nodes=snapshot.graph().nodes().stream()
                 .collect(Collectors.toMap(PlannerKnowledgeQueries.Node::id,node->node));
-        Map<Long,LearningQueries.AssignedTask> tasks=row.sessionId()==null?Map.of():
-                learning.sessionTasks(userId,row.sessionId()).stream()
-                        .collect(Collectors.toMap(LearningQueries.AssignedTask::id,task->task));
-        List<ItemView> items=store.items(row.id()).stream().map(item->{
-            var task=tasks.get(item.taskId());
-            var node=nodes.get(item.nodeId());
-            return new ItemView(Long.toString(item.taskId()),Long.toString(item.nodeId()),
+        List<PlannerStore.TaskRef> refs=store.taskRefs(row.id());
+        Map<Long,LearningQueries.AssignedTask> tasks=new HashMap<>();
+        refs.stream().map(PlannerStore.TaskRef::sessionId).distinct().forEach(sessionId ->
+                learning.sessionTasks(userId,sessionId).forEach(task->tasks.put(task.id(),task)));
+        List<ItemView> items=refs.stream().map(ref->{
+            var task=tasks.get(ref.taskId());
+            var node=nodes.get(ref.nodeId());
+            if(task==null)throw new IllegalStateException("Pinned planner task is unavailable");
+            return new ItemView(Long.toString(ref.taskId()),Long.toString(ref.nodeId()),
                     node==null?"Unknown":locale.requiresTranslation()?node.nameVi():node.name(),
-                    task==null?"Unavailable":locale.requiresTranslation()?task.titleVi():task.titleEn(),
-                    task==null?"UNKNOWN":task.status(),item.minutes(),item.score(),
-                    decodeReasons(item.reasons()));
+                    locale.requiresTranslation()?task.titleVi():task.titleEn(),
+                    task.status(),ref.minutes(),ref.score(),decodeReasons(ref.reasons()),ref.carried());
         }).toList();
-        int remaining=row.budget()-items.stream().mapToInt(ItemView::minutes).sum();
-        var ranking=policy.plan(toPolicy(snapshot,row.budget()));
-        return new TodayView(Long.toString(row.id()),row.outcome(),ranking.reasonCode(),row.revision(),row.budget(),
-                Long.toString(row.graphVersionId()),PlannerPolicyV1.VERSION,row.projectionAsOf(),
+        String reason;
+        List<PlannerPolicyV1.Choice> alternatives;
+        if(PlannerPolicyV1.VERSION.equals(row.policyVersion())){
+            var ranking=policy.plan(toPolicy(snapshot,row.budget()));
+            reason=ranking.reasonCode(); alternatives=ranking.alternatives();
+        }else{
+            var ranking=AdaptiveReplanService.replay(json,row.inputPayload(),this);
+            reason=ranking.reasonCode(); alternatives=ranking.ranking().alternatives();
+        }
+        return new TodayView(Long.toString(row.id()),row.outcome(),reason,row.revision(),row.budget(),
+                Long.toString(row.graphVersionId()),row.policyVersion(),row.projectionAsOf(),
                 row.sessionId()==null?null:Long.toString(row.sessionId()),null,items,
-                ranking.alternatives().stream().map(choice->nodes.get(choice.nodeId()))
+                alternatives.stream().map(choice->nodes.get(choice.nodeId()))
                         .filter(java.util.Objects::nonNull)
                         .map(node->locale.requiresTranslation()?node.nameVi():node.name()).toList());
     }
@@ -190,7 +206,7 @@ public class PlannerService {
         var current=store.current(userId,goal.id(),day).orElse(null);
         SnapshotInput pinned=current==null?load(goal.goalTemplateId(),userId,goal.defaultDailyMinutes(),
                 after==null?now:after.projectionAsOf())
-                :decode(current.inputPayload());
+                :baseSnapshot(current);
         String planId=current==null?"0":Long.toString(current.id());
         int revision=current==null?0:current.revision();
         if(after!=null && (after.userId()!=userId || after.goalId()!=goal.id()
@@ -213,12 +229,13 @@ public class PlannerService {
                 stale=true;
             }
         }
-        PlannerPolicyV1.Result ranking=policy.plan(toPolicy(pinned,
-                current==null?goal.defaultDailyMinutes():current.budget()));
+        PlannerPolicyV1.Result ranking=current!=null && !PlannerPolicyV1.VERSION.equals(current.policyVersion())
+                ?AdaptiveReplanService.replay(json,current.inputPayload(),this).ranking()
+                :policy.plan(toPolicy(pinned,current==null?goal.defaultDailyMinutes():current.budget()));
         Map<Long,PlannerProgressQueries.Node> state=pinned.progress().nodes().stream()
                 .collect(Collectors.toMap(PlannerProgressQueries.Node::nodeId,node->node));
-        Set<Long> currentNodes=current==null?Set.of():store.items(current.id()).stream()
-                .map(PlannerStore.ItemRow::nodeId).collect(Collectors.toSet());
+        Set<Long> currentNodes=current==null?Set.of():store.taskRefs(current.id()).stream()
+                .filter(ref->!ref.carried()).map(PlannerStore.TaskRef::nodeId).collect(Collectors.toSet());
         boolean isStale=stale;
         int offset=after==null?0:after.offset();
         if(offset<0 || (after!=null && offset>=pinned.graph().nodes().size()))
@@ -246,7 +263,7 @@ public class PlannerService {
                 planId,revision,pinned.projectionAsOf(),offset+page.size())):null;
         return new RoadmapView(Long.toString(pinned.graph().graphVersionId()),
                 pinned.progress().policyVersion(),pinned.progress().digest(),pinned.review().digest(),
-                PlannerPolicyV1.VERSION,pinned.projectionAsOf(),
+                current==null?PlannerPolicyV1.VERSION:current.policyVersion(),pinned.projectionAsOf(),
                 current==null?null:planId,revision,stale,hasMore,nextCursor,nodes,edges);
     }
 
@@ -273,7 +290,7 @@ public class PlannerService {
         }
     }
 
-    private SnapshotInput load(long goalTemplateId,long userId,int budget,Instant asOf){
+    SnapshotInput load(long goalTemplateId,long userId,int budget,Instant asOf){
         var graph=knowledge.planningGraph(goalTemplateId);
         Set<Long> ids=graph.nodes().stream().map(PlannerKnowledgeQueries.Node::id).collect(Collectors.toSet());
         var state=progress.snapshot(userId,graph.graphVersionId(),ids,asOf);
@@ -285,7 +302,7 @@ public class PlannerService {
         return new SnapshotInput(asOf,graph,state,due,variants);
     }
 
-    private PlannerPolicyV1.Input toPolicy(SnapshotInput source,int budget){
+    PlannerPolicyV1.Input toPolicy(SnapshotInput source,int budget){
         return new PlannerPolicyV1.Input(source.projectionAsOf(),budget,
                 source.graph().nodes().stream().map(node->new PlannerPolicyV1.Node(node.id(),
                         node.status(),node.relevance(),node.requiredMastery(),node.topologicalOrder())).toList(),
@@ -299,14 +316,18 @@ public class PlannerService {
                         variant.difficulty(),variant.minutes())).toList());
     }
 
-    private String encode(Object value){try{return json.writeValueAsString(value);}
+    String encode(Object value){try{return json.writeValueAsString(value);}
         catch(JsonProcessingException exception){throw new IllegalStateException("Planner serialization failed",exception);}}
     private SnapshotInput decode(String value){try{return json.readValue(value,SnapshotInput.class);}
         catch(JsonProcessingException exception){throw new IllegalStateException("Planner snapshot is invalid",exception);}}
     private List<String> decodeReasons(String value){try{return json.readValue(value,
             new com.fasterxml.jackson.core.type.TypeReference<List<String>>(){});}
         catch(JsonProcessingException exception){throw new IllegalStateException("Planner reasons are invalid",exception);}}
-    private static String digest(String value){try{return java.util.HexFormat.of().formatHex(
+    SnapshotInput baseSnapshot(PlannerStore.PlanRow row){
+        if(PlannerPolicyV1.VERSION.equals(row.policyVersion()))return decode(row.inputPayload());
+        return AdaptiveReplanService.decode(json,row.inputPayload()).base();
+    }
+    static String digest(String value){try{return java.util.HexFormat.of().formatHex(
             MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}
         catch(NoSuchAlgorithmException exception){throw new IllegalStateException(exception);}}
 
@@ -314,7 +335,7 @@ public class PlannerService {
             PlannerProgressQueries.Snapshot progress,PlannerReviewQueries.Snapshot review,
             List<LearningQueries.PlannerVariant> variants) {}
     public record ItemView(String taskId,String nodeId,String nodeName,String title,String status,
-            int minutes,BigDecimal priorityScore,List<String> reasons) {}
+            int minutes,BigDecimal priorityScore,List<String> reasons,boolean carried) {}
     public record TodayView(String planId,String outcome,String reasonCode,int revision,int budgetMinutes,String graphVersionId,
             String plannerPolicyVersion,Instant projectionAsOf,String sessionId,String activeManualSessionId,
             List<ItemView> items,List<String> alternatives) {}

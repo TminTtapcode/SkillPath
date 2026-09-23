@@ -112,7 +112,21 @@ Status: `DONE` on 2026-09-23. Core orchestration, task check API, evidence proje
 
 Exit: MVP completion scenario works end to end.
 
-## Phase 8 — AI and product hardening
+## Phase 8 — Onboarding & Pedagogical Pivot
+
+Status: `DRAFT` (Awaiting P7 completion for domain changes. P8.0 and P8.1 UI prototyping approved on 2026-09-23).
+
+- **P8.0 Pedagogical Contract**: Define architectural boundaries (Practice != Evidence, Review = Planner Candidate).
+- **P8.1 Onboarding**: Interactive Generic Web Architecture mental map.
+- **P8.2 Learning Content Model**: `ResourceVersion` and `TaskResource` entities.
+- **P8.3 Practice**: Formative practice flow prior to assessment.
+- **P8.4 Review-aware Planner**: Budget-aware priority policy combining `REVIEW_DUE` and `NEW` learning.
+- **P8.5 UX Integration**: Multi-track goal switching and unified `Learn + Practice + Check` task view.
+- **P8.6 E2E Validation**: Integration tests for the new pedagogical loop.
+
+Exit: The learner can complete a full cycle from onboarding to a mixed review/new learning plan using real resources and formative practice.
+
+## Phase 9 — AI and product hardening
 
 - Rubric-based evaluation, question/exercise/explanation generation.
 - Gold dataset and cost/rate controls.

@@ -24,20 +24,75 @@ public class AssessmentEvidenceHandler implements OutboxHandler {
     private final Clock clock;
     private final KnowledgeStatePolicyV1 policy = new KnowledgeStatePolicyV1();
     public AssessmentEvidenceHandler(ProgressStore store,ObjectMapper mapper,JdbcTemplate jdbc,Clock clock){this.store=store;this.mapper=mapper;this.jdbc=jdbc;this.clock=clock;}
-    @Override public boolean supports(String owner,String type,int version){return owner.equals("assessment")&&type.equals("AssessmentEvidenceCreated")&&version==1;}
+    @Override public boolean supports(String owner,String type,int version){return owner.equals("assessment")&&type.equals("AssessmentEvidenceCreated")&&(version==1||version==2);}
     @Override public void handle(OutboxEvent event){
         try{
             JsonNode p=mapper.readTree(event.payload());
             long user=id(p,"userId"),node=id(p,"knowledgeNodeId"),graph=id(p,"graphVersionId");
+            Long projectionId=event.eventVersion()==2?lockAttempt(p):null;
             store.lockProjection(user,graph,node,clock.instant());
             ProgressStore.SourceEvidence evidence=new ProgressStore.SourceEvidence(event.id(),event.eventKey(),"ASSESSMENT_EVIDENCE",p.path("evidenceId").asText(),user,id(p,"goalId"),graph,node,Dimension.valueOf(p.path("dimension").asText()),decimal(p,"score"),decimal(p,"reliability"),p.path("policyVersion").asText("assessment-objective-v1"),Instant.parse(p.path("observedAt").asText()));
             boolean added=store.append(evidence,clock.instant());
             if(!added)return;
             updateMisconceptions(p,evidence);
             var snapshot=store.saveProjection(user,graph,node,policy.project(store.evidence(user,node),clock.instant()),clock.instant());
-            if(!snapshot.priorAcquisitionStatus().equals(snapshot.acquisitionStatus())||snapshot.priorMastery().compareTo(snapshot.mastery())!=0) emit(event,user,graph,node,snapshot);
+            if(event.eventVersion()==2)acceptAttemptEvidence(event,p,projectionId,snapshot.acquisitionStatus(),evidence);
+            else if(!snapshot.priorAcquisitionStatus().equals(snapshot.acquisitionStatus())||snapshot.priorMastery().compareTo(snapshot.mastery())!=0) emit(event,user,graph,node,snapshot);
         }catch(Exception exception){throw new IllegalStateException("INVALID_ASSESSMENT_EVIDENCE_EVENT",exception);}
     }
+    private long lockAttempt(JsonNode p){
+        String kind=p.path("attemptKind").asText();
+        if(!java.util.Set.of("DIAGNOSTIC","TASK_CHECK").contains(kind)
+                || !p.path("replanEligible").isBoolean())throw new IllegalArgumentException("Invalid attempt metadata");
+        int expected=p.path("expectedEvidenceCount").asInt(0);
+        if(expected<1||expected>20)throw new IllegalArgumentException("Invalid attempt evidence count");
+        long attempt=id(p,"attemptId"),user=id(p,"userId"),goal=id(p,"goalId"),graph=id(p,"graphVersionId");
+        Instant now=clock.instant();
+        jdbc.update("INSERT INTO progress_attempt_projections(attempt_kind,attempt_id,user_id,goal_id,graph_version_id,expected_count,replan_eligible,created_at) VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=id",
+                kind,attempt,user,goal,graph,expected,p.path("replanEligible").booleanValue(),Timestamp.from(now));
+        var rows=jdbc.query("SELECT id,user_id,goal_id,graph_version_id,expected_count,replan_eligible FROM progress_attempt_projections WHERE attempt_kind=? AND attempt_id=? FOR UPDATE",
+                (rs,n)->new AttemptProjection(rs.getLong(1),rs.getLong(2),rs.getLong(3),rs.getLong(4),rs.getInt(5),rs.getBoolean(6)),kind,attempt);
+        if(rows.size()!=1)throw new IllegalStateException("Attempt projection receipt missing");
+        var row=rows.getFirst();
+        if(row.userId()!=user||row.goalId()!=goal||row.graphVersionId()!=graph||row.expectedCount()!=expected
+                ||row.replanEligible()!=p.path("replanEligible").booleanValue())
+            throw new IllegalArgumentException("Attempt metadata changed");
+        return row.id();
+    }
+    private void acceptAttemptEvidence(OutboxEvent event,JsonNode p,long projectionId,String status,
+                                       ProgressStore.SourceEvidence evidence)throws Exception{
+        Instant now=clock.instant();
+        jdbc.update("INSERT INTO progress_attempt_evidence_receipts(projection_id,source_event_id,evidence_id,knowledge_node_id,dimension,score,reliability,projected_status,projected_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                projectionId,event.id(),id(p,"evidenceId"),evidence.nodeId(),evidence.dimension().name(),
+                evidence.score(),evidence.reliability(),status,Timestamp.from(now));
+        int count=jdbc.queryForObject("SELECT COUNT(*) FROM progress_attempt_evidence_receipts WHERE projection_id=?",Integer.class,projectionId);
+        int expected=p.path("expectedEvidenceCount").asInt();
+        if(count>expected)throw new IllegalStateException("Attempt evidence exceeded expected count");
+        if(count!=expected)return;
+        List<ReceiptEvidence> receipts=jdbc.query("SELECT evidence_id,knowledge_node_id,dimension,score,reliability FROM progress_attempt_evidence_receipts WHERE projection_id=? ORDER BY evidence_id",
+                (rs,n)->new ReceiptEvidence(rs.getLong(1),rs.getLong(2),rs.getString(3),
+                        rs.getBigDecimal(4),rs.getBigDecimal(5)),projectionId);
+        List<Map<String,Object>> accepted=receipts.stream().map(item->{
+            var finalState=store.state(evidence.userId(),item.nodeId());
+            if(finalState==null || finalState.graphVersionId()!=evidence.graphVersionId())
+                throw new IllegalStateException("Missing compatible final state for accepted evidence");
+            return Map.<String,Object>of("evidenceId",Long.toString(item.evidenceId()),
+                    "knowledgeNodeId",Long.toString(item.nodeId()),"dimension",item.dimension(),
+                    "score",item.score(),"reliability",item.reliability(),"status",finalState.status());
+        }).toList();
+        String kind=p.path("attemptKind").asText();long attempt=id(p,"attemptId");
+        Map<String,Object> payload=new LinkedHashMap<>();
+        payload.put("attemptKind",kind);payload.put("attemptId",Long.toString(attempt));
+        payload.put("userId",Long.toString(evidence.userId()));payload.put("goalId",Long.toString(evidence.goalId()));
+        payload.put("graphVersionId",Long.toString(evidence.graphVersionId()));
+        payload.put("expectedEvidenceCount",expected);payload.put("replanEligible",p.path("replanEligible").booleanValue());
+        payload.put("evidence",accepted);payload.put("acceptedAt",now.toString());
+        jdbc.update("INSERT INTO outbox_events(event_key,owner_module,aggregate_type,aggregate_id,event_type,event_version,payload,status,attempt_count,available_at,occurred_at,created_at,updated_at) VALUES(?,'progress','AssessmentAttempt',?,'EvidenceAccepted',1,CAST(? AS JSON),'PENDING',0,?,?,?,?)",
+                "evidence-accepted:"+kind+":"+attempt,Long.toString(attempt),mapper.writeValueAsString(payload),
+                Timestamp.from(now),Timestamp.from(now),Timestamp.from(now),Timestamp.from(now));
+    }
+    private record AttemptProjection(long id,long userId,long goalId,long graphVersionId,int expectedCount,boolean replanEligible){}
+    private record ReceiptEvidence(long evidenceId,long nodeId,String dimension,BigDecimal score,BigDecimal reliability){}
     private void emit(OutboxEvent source,long user,long graph,long node,ProgressStore.StateSnapshot state)throws Exception{
         Instant now=clock.instant();Map<String,Object> payload=new LinkedHashMap<>();payload.put("userId",Long.toString(user));payload.put("graphVersionId",Long.toString(graph));payload.put("knowledgeNodeId",Long.toString(node));payload.put("priorStatus",state.priorAcquisitionStatus());payload.put("status",state.acquisitionStatus());payload.put("mastery",state.mastery());payload.put("changedAt",now.toString());
         jdbc.update("INSERT INTO outbox_events(event_key,owner_module,aggregate_type,aggregate_id,event_type,event_version,payload,status,attempt_count,available_at,occurred_at,created_at,updated_at) VALUES(?, 'progress','UserKnowledge',?,'KnowledgeStateChanged',1,CAST(? AS JSON),'PENDING',0,?,?,?,?)", "knowledge-state:"+source.id(),Long.toString(node),mapper.writeValueAsString(payload),Timestamp.from(now),Timestamp.from(now),Timestamp.from(now),Timestamp.from(now));

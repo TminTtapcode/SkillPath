@@ -484,6 +484,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/learning/tasks/{taskId}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTaskCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/tasks/{taskId}/check/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitTaskCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/learning/tasks/{id}/skip": {
         parameters: {
             query?: never;
@@ -612,6 +644,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/learning/today/available-minutes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["overrideTodayAvailableMinutes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/today/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshTodayPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/today/replan-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTodayReplanStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/roadmap": {
         parameters: {
             query?: never;
@@ -660,7 +740,7 @@ export interface components {
             /** @enum {string} */
             activityType: "LEARN" | "PRACTICE" | "RECALL";
             /** @enum {string} */
-            evaluationMode: "NONE" | "SELF_REPORT";
+            evaluationMode: "NONE" | "SELF_REPORT" | "OBJECTIVE";
             plannedMinutes: number;
             actualMinutes?: number | null;
             title: string;
@@ -701,6 +781,27 @@ export interface components {
             /** @enum {string} */
             reasonCode: "TIME" | "DIFFICULT" | "OTHER";
         };
+        TaskCheckResponse: {
+            taskId: string;
+            graphVersionId: string;
+            questionVersionId: string;
+            /** @enum {string} */
+            type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
+            taskStatus: string;
+            prompt: string;
+            options: components["schemas"]["AssessmentQuestionOption"][];
+        };
+        TaskCheckAnswerRequest: {
+            selectedOptionIds: string[];
+            timeSpentSeconds: number;
+            actualMinutes: number;
+        };
+        TaskCheckAttemptResponse: {
+            attemptId: string;
+            /** @description Observed answer score, never mastery */
+            score: number;
+            replayed: boolean;
+        };
         TodayPlanItem: {
             taskId: string;
             nodeId: string;
@@ -710,6 +811,30 @@ export interface components {
             minutes: number;
             priorityScore: number;
             reasons: string[];
+            /** @description Existing task linked to its immutable origin decision */
+            carried: boolean;
+        };
+        AvailableMinutesRequest: {
+            availableMinutes: number;
+        };
+        AvailableMinutesResponse: {
+            /** Format: date */
+            learningDay: string;
+            availableMinutes: number;
+            revision: number;
+            replayed: boolean;
+        };
+        ReplanStatusResponse: {
+            /** Format: date */
+            learningDay: string;
+            /** @enum {string} */
+            status: "NONE" | "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+            triggerKind?: string | null;
+            resultCode?: string | null;
+            errorCode?: string | null;
+            attempts: number;
+            /** @description Rollout gate for the background revision worker */
+            automaticReplanEnabled: boolean;
         };
         TodayPlanResponse: {
             planId?: string | null;
@@ -1911,6 +2036,74 @@ export interface operations {
             422: components["responses"]["Problem"];
         };
     };
+    getTaskCheck: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pinned objective question without answer key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCheckResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    submitTaskCheck: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCheckAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Identical idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCheckAttemptResponse"];
+                };
+            };
+            /** @description Evaluated observation and task completion committed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCheckAttemptResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     skipLearningTask: {
         parameters: {
             query?: never;
@@ -2145,6 +2338,82 @@ export interface operations {
                 };
             };
             409: components["responses"]["Problem"];
+        };
+    };
+    overrideTodayAvailableMinutes: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailableMinutesRequest"];
+            };
+        };
+        responses: {
+            /** @description Audited day-local override and queued replan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableMinutesResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    refreshTodayPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current or newly refreshed local-day plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    getTodayReplanStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Durable Review-ready/override replan request state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplanStatusResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
         };
     };
     getRoadmap: {

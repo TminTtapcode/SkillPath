@@ -10,6 +10,7 @@ import {
 } from '../../shared/api/client'
 import { ErrorNotice, Loading } from '../../shared/components/AsyncState'
 import { useI18n } from '../../shared/i18n/I18n'
+import { TaskCheckPanel } from './TaskCheckPanel'
 
 type PendingCommand = {
   taskId: string
@@ -137,47 +138,48 @@ export function LearningSessionPage() {
             <h3>{task.resourceTitle}</h3>
             <p>{task.resourceBody}</p>
           </div>
-          {task.status === 'IN_PROGRESS' && (
-            <>
-              <fieldset className="learning-checklist">
-                <legend>{t('learning.checklist')}</legend>
-                {task.checklist.map((item) => (
-                  <label key={item.id}>
-                    <input
-                      type="checkbox"
-                      checked={checked.includes(item.id)}
-                      onChange={(event) =>
-                        setChecked(
-                          event.target.checked
-                            ? [...checked, item.id]
-                            : checked.filter((id) => id !== item.id),
-                        )
-                      }
-                      disabled={command.isPending}
-                    />
-                    {item.label}
-                  </label>
-                ))}
-              </fieldset>
-              <label className="learning-minutes">
-                {t('learning.actualMinutes')}
-                <input
-                  type="number"
-                  min="0"
-                  max="360"
-                  step="1"
-                  aria-describedby="learning-completion-hint"
-                  aria-invalid={actualMinutes !== '' && !validMinutes}
-                  value={actualMinutes}
-                  onChange={(event) => setActualMinutes(event.target.value)}
-                  disabled={command.isPending}
-                />
-              </label>
-              <p className="form-hint" id="learning-completion-hint">
-                {t('learning.validation')}
-              </p>
-            </>
-          )}
+          {task.status === 'IN_PROGRESS' &&
+            task.evaluationMode !== 'OBJECTIVE' && (
+              <>
+                <fieldset className="learning-checklist">
+                  <legend>{t('learning.checklist')}</legend>
+                  {task.checklist.map((item) => (
+                    <label key={item.id}>
+                      <input
+                        type="checkbox"
+                        checked={checked.includes(item.id)}
+                        onChange={(event) =>
+                          setChecked(
+                            event.target.checked
+                              ? [...checked, item.id]
+                              : checked.filter((id) => id !== item.id),
+                          )
+                        }
+                        disabled={command.isPending}
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </fieldset>
+                <label className="learning-minutes">
+                  {t('learning.actualMinutes')}
+                  <input
+                    type="number"
+                    min="0"
+                    max="360"
+                    step="1"
+                    aria-describedby="learning-completion-hint"
+                    aria-invalid={actualMinutes !== '' && !validMinutes}
+                    value={actualMinutes}
+                    onChange={(event) => setActualMinutes(event.target.value)}
+                    disabled={command.isPending}
+                  />
+                </label>
+                <p className="form-hint" id="learning-completion-hint">
+                  {t('learning.validation')}
+                </p>
+              </>
+            )}
           {['ASSIGNED', 'IN_PROGRESS'].includes(task.status) && (
             <label className="learning-reason">
               {t('learning.reason')}
@@ -218,12 +220,14 @@ export function LearningSessionPage() {
             )}
             {task.status === 'IN_PROGRESS' && (
               <>
-                <button
-                  disabled={command.isPending || !canComplete}
-                  onClick={() => send('complete', task)}
-                >
-                  {t('learning.completeTask')}
-                </button>
+                {task.evaluationMode !== 'OBJECTIVE' && (
+                  <button
+                    disabled={command.isPending || !canComplete}
+                    onClick={() => send('complete', task)}
+                  >
+                    {t('learning.completeTask')}
+                  </button>
+                )}
                 <button
                   className="button-secondary"
                   disabled={command.isPending}
@@ -249,6 +253,13 @@ export function LearningSessionPage() {
               </button>
             )}
           </div>
+          {task.status === 'IN_PROGRESS' &&
+            task.evaluationMode === 'OBJECTIVE' && (
+              <TaskCheckPanel
+                taskId={task.id}
+                onComplete={() => void session.refetch()}
+              />
+            )}
           {command.error && (
             <>
               <ErrorNotice error={command.error} />
@@ -271,7 +282,13 @@ export function LearningSessionPage() {
           )}
         </article>
       )}
-      <p className="next-step-notice">{t('learning.boundary')}</p>
+      <p className="next-step-notice">
+        {t(
+          data.tasks.some((item) => item.evaluationMode === 'OBJECTIVE')
+            ? 'learning.check.sessionBoundary'
+            : 'learning.boundary',
+        )}
+      </p>
       <Link to="/learning">{t('learning.goCatalog')}</Link>
       <Link to="/goal">{t('common.returnGoal')}</Link>
     </section>

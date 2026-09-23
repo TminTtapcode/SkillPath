@@ -80,16 +80,20 @@ practical skill has been evaluated — AI hardening happens in Phase 8.
 - Dockerize local infrastructure first. Containerize backend/frontend after the first end-to-end vertical slice runs locally.
 - Redis, queues, Kubernetes, microservices, social features, marketplace, voice tutor, and complex gamification are outside MVP.
 
-## MVP learning loop
+## MVP learning loop (P8 Target Architecture)
 
 1. User defines a goal, target date, and daily time budget.
-2. User completes a short diagnostic.
-3. System creates an evidence-backed knowledge state.
-4. Planner chooses one small set of tasks fitting today's time.
-5. User learns, practices, and recalls.
-6. Evaluation produces concept-level evidence.
-7. Knowledge state and review schedule update.
-8. Planner generates the next plan.
+2. System presents a "Mental Map" (Architecture Onboarding) for context.
+3. User completes a short diagnostic assessment.
+4. System creates an evidence-backed knowledge state.
+5. Planner chooses a prioritized combination of `REVIEW_DUE` (Spaced Repetition) and `NEW` tasks fitting today's time.
+6. User engages with the Task:
+   - **Learn:** Studies real `ResourceVersions` (e.g., MDN, Oracle Docs).
+   - **Practice:** Completes formative exercises (no assessment evidence).
+   - **Check:** Completes objective assessment.
+7. Evaluation produces concept-level evidence.
+8. Knowledge state and review schedule update.
+9. Planner generates the next plan.
 
 ## Current documentation status
 
@@ -275,6 +279,8 @@ plan or ADR change.
    usability checks, pedagogical review of seeded content, privacy retention design,
    and Flyway/MySQL compatibility review. Do not infer full-curriculum coverage from
    the four-root content pack.
+
+2. Following P7, Phase 8 (Onboarding & Pedagogical Pivot) will refine the learner journey. P8 establishes strict boundaries (Task = Learn + Practice + Check) and requires the Planner to treat `REVIEW_DUE` items as first-class candidates alongside `NEW` learning. Domain implementation for P8 awaits P7's formal completion, but UI prototyping (P8.1 Generic Web Architecture Onboarding) is in progress.
 
 ## Context maintenance
 

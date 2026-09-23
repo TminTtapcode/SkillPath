@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillpath.goal.application.GoalQueries;
 import com.skillpath.knowledge.application.PlannerKnowledgeQueries;
 import com.skillpath.learning.application.LearningQueries;
+import com.skillpath.planner.domain.PlannerPolicyV1;
 import com.skillpath.progress.application.PlannerProgressQueries;
 import com.skillpath.review.application.PlannerReviewQueries;
 import com.skillpath.shared.api.ApiException;
@@ -44,7 +45,7 @@ class PlannerRoadmapSnapshotTest {
     private final PlannerStore store=mock(PlannerStore.class);
     private final ObjectMapper json=new ObjectMapper().findAndRegisterModules();
     private final PlannerService service=new PlannerService(goals,knowledge,progress,review,learning,
-            store,json,Clock.fixed(NOW,ZoneOffset.UTC));
+            store,mock(PlannerDayStore.class),json,Clock.fixed(NOW,ZoneOffset.UTC));
 
     @Test void fiftyNodeFixturePagesInStableTopologyWithoutMixingSnapshots(){
         configureGraph(50);
@@ -97,7 +98,7 @@ class PlannerRoadmapSnapshotTest {
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("not compatible");
         verify(store,never()).snapshot(anyLong(),anyLong(),anyLong(),
-                any(),any(),any(),any(),any(),anyInt(),anyInt());
+                any(),any(),any(),any(),any(),any(),anyInt(),anyInt());
     }
 
     @Test void pinnedPlanShowsStaleInsteadOfRelabelingOldWorkCurrent()throws Exception{
@@ -106,11 +107,11 @@ class PlannerRoadmapSnapshotTest {
                 new PlannerProgressQueries.Snapshot("knowledge-state-v1","progress-7",true,List.of()),
                 new PlannerReviewQueries.Snapshot("review-7",true,List.of()),List.of());
         var row=new PlannerStore.PlanRow(77,USER,5,LocalDate.parse("2026-09-23"),
-                "Asia/Ho_Chi_Minh",60,1,88L,"CURRENT","PLANNED",7,NOW,
+                "Asia/Ho_Chi_Minh",60,1,88L,"CURRENT","PLANNED",PlannerPolicyV1.VERSION,7,NOW,
                 "progress-7","review-7",json.writeValueAsString(pinned));
         when(store.current(eq(USER),eq(5L),any())).thenReturn(Optional.of(row));
-        when(store.items(77)).thenReturn(List.of(new PlannerStore.ItemRow(1,99,100,1,500,10,
-                new BigDecimal("70.00"),"[]")));
+        when(store.taskRefs(77)).thenReturn(List.of(new PlannerStore.TaskRef(100,77,99,88,1,
+                1,500,10,new BigDecimal("70.00"),"[]",false)));
         when(progress.snapshot(eq(USER),eq(7L),any(),eq(NOW)))
                 .thenReturn(new PlannerProgressQueries.Snapshot("knowledge-state-v1",
                         "progress-changed",true,List.of()));

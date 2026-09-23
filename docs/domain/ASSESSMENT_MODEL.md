@@ -232,6 +232,18 @@ only presentation and cannot advance or mutate the session.
 
 ## 9. Acceptance criteria
 
+### Phase 7 objective task-check checkpoint
+
+An Assessment-owned task-check definition pins a question version and graph
+version to one Learning template version. Learning provides an owner-checked
+application view of the assigned task; Assessment never reads Learning tables.
+The deterministic `task-check-objective-v1` attempt uses the existing exact
+single/multiple-choice scoring bounds and emits only `RECOGNITION` or
+`UNDERSTANDING` evidence. Learning completion and Assessment attempt/evidence/
+outbox writes share one transaction. Wrong answers are still observations;
+neither the answer score nor self-report is authoritative mastery. The endpoint
+is rollout-gated until the rest of the adaptive loop is ready.
+
 - Một attempt retry không tạo evidence trùng.
 - MCQ đúng không thể một mình nâng `APPLICATION`.
 - Multi-concept answer tạo evidence riêng theo rubric criterion.

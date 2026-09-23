@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class LearningService implements LearningQueries {
+public class LearningService implements LearningQueries, EvaluatedTaskCommands {
     private static final Pattern KEY = Pattern.compile("[A-Za-z0-9._:-]{1,128}");
     private static final Pattern SEQUENCE_KEY = Pattern.compile("[a-z0-9-]{1,120}");
     private static final Set<String> REASONS = Set.of("TIME", "DIFFICULT", "OTHER");
@@ -67,6 +67,16 @@ public class LearningService implements LearningQueries {
 
     @Override
     @Transactional(readOnly = true)
+    public List<LearningQueries.AdaptiveVariant> activeAdaptiveVariants(long graphVersionId) {
+        return store.activeAdaptiveVariants(graphVersionId).stream().map(variant ->
+                new LearningQueries.AdaptiveVariant(variant.content().templateVersionId(),
+                        variant.content().primaryNodeId(),variant.content().activityType(),
+                        variant.difficulty(),variant.content().minutes(),variant.variantGroupKey(),
+                        variant.content().evaluationMode())).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public LearningQueries.AssignedSession activeAssignment(long userId, long goalId) {
         return store.activeSession(userId, goalId).map(session ->
                 new LearningQueries.AssignedSession(session.id(), session.assignmentSource()))
@@ -83,13 +93,143 @@ public class LearningService implements LearningQueries {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LearningQueries.PlannerTaskState> plannerTaskStates(long userId,long sessionId) {
+        SessionRow session=store.session(userId,sessionId,false)
+                .orElseThrow(()->notFound("LEARNING_SESSION_NOT_FOUND"));
+        if(!"PLANNER".equals(session.assignmentSource()))
+            throw new ApiException(HttpStatus.CONFLICT,"NOT_PLANNER_SESSION","This is not a planner session.");
+        return store.tasks(userId,sessionId).stream().map(task->new LearningQueries.PlannerTaskState(
+                task.id(),task.position(),task.templateVersionId(),task.status(),
+                task.plannedMinutes(),task.actualMinutes())).toList();
+    }
+
+    @Override
+    @Transactional
+    public List<LearningQueries.AssignedTask> revisePlannerAssignment(long userId,long sessionId,
+            long graphVersionId,List<Long> expireTaskIds,List<LearningQueries.PlannerSelection> selections,
+            Instant now) {
+        SessionRow session=store.session(userId,sessionId,true)
+                .orElseThrow(()->notFound("LEARNING_SESSION_NOT_FOUND"));
+        if(!"ACTIVE".equals(session.status())||!"PLANNER".equals(session.assignmentSource())
+                ||session.graphVersionId()!=graphVersionId)
+            throw new ApiException(HttpStatus.CONFLICT,"PLANNER_REVISION_BLOCKED",
+                    "The planner session changed or is incompatible.");
+        List<TaskRow> prior=store.tasks(userId,sessionId);
+        Set<Long> assigned=prior.stream().filter(task->"ASSIGNED".equals(task.status()))
+                .map(TaskRow::id).collect(java.util.stream.Collectors.toSet());
+        if(expireTaskIds==null||!assigned.equals(new HashSet<>(expireTaskIds))
+                ||expireTaskIds.size()!=assigned.size()||selections==null||selections.size()>3)
+            throw new ApiException(HttpStatus.CONFLICT,"PLANNER_REVISION_BLOCKED",
+                    "Only current unstarted assignments may be replaced.");
+        for(TaskRow task:prior)if(assigned.contains(task.id())){
+            long receipt=store.addReceipt(userId,"internal-adaptive-expire-"+sessionId+"-"+task.id(),
+                    "adaptive-expire",Long.toString(sessionId),task.id(),"EXPIRED",now);
+            if(!store.transitionTask(task.id(),task.version(),"EXPIRED",null,now))
+                throw new ApiException(HttpStatus.CONFLICT,"PLANNER_REVISION_BLOCKED",
+                        "The planner task changed.");
+            store.addEvent(task.id(),userId,receipt,"ASSIGNED","EXPIRED","OTHER",now);
+        }
+        var available=store.activeAdaptiveVariants(graphVersionId).stream()
+                .collect(java.util.stream.Collectors.toMap(v->v.content().templateVersionId(),v->v));
+        Set<Long> used=prior.stream().map(TaskRow::templateVersionId)
+                .collect(java.util.stream.Collectors.toSet());
+        List<LearningStore.PlannerAssignedTask> append=new ArrayList<>();
+        int position=prior.stream().mapToInt(TaskRow::position).max().orElse(0);
+        for(var selected:selections){
+            var variant=available.get(selected.templateVersionId());
+            if(selected.decisionId()<1||variant==null||!used.add(selected.templateVersionId()))
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,"INVALID_PLANNER_ASSIGNMENT",
+                        "Adaptive task selection is invalid.");
+            var content=variant.content();
+            append.add(new LearningStore.PlannerAssignedTask(selected.decisionId(),new CatalogTask(
+                    content.templateVersionId(),++position,content.activityType(),content.evaluationMode(),
+                    content.minutes(),content.primaryNodeId(),content.title(),content.instructions(),
+                    content.resourceTitle(),content.resourceBody(),content.checklistEn(),content.checklistVi())));
+        }
+        List<TaskRow> added=store.appendPlannerTasks(userId,sessionId,append,now);
+        if(added.isEmpty() && prior.stream().noneMatch(task->Set.of("IN_PROGRESS","BLOCKED")
+                .contains(task.status())))store.closeSession(sessionId,"STOPPED",now);
+        return added.stream().map(task->
+                new LearningQueries.AssignedTask(task.id(),task.position(),task.status(),
+                        task.plannedMinutes(),task.title().en(),task.title().vi())).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EvaluatedTaskCommands.EvaluatedTask taskForCheck(long userId, long taskId) {
+        long sessionId = store.sessionIdForTask(userId, taskId)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        SessionRow session = store.session(userId, sessionId, false)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        TaskRow task = store.task(userId, taskId, false)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        if (!"OBJECTIVE".equals(task.evaluationMode())) {
+            throw new ApiException(HttpStatus.CONFLICT, "TASK_CHECK_UNAVAILABLE",
+                    "This task has no objective check.");
+        }
+        return new EvaluatedTaskCommands.EvaluatedTask(task.id(), session.goalId(), session.graphVersionId(),
+                task.templateVersionId(), task.status(), session.status());
+    }
+
+    @Override
+    @Transactional
+    public void completeCheckedTask(long userId, long taskId, long attemptId, int actualMinutes, Instant now) {
+        if (attemptId <= 0 || actualMinutes < 0 || actualMinutes > 360) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_TASK_COMPLETION", "Completion input is invalid.");
+        }
+        long sessionId = store.sessionIdForTask(userId, taskId)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        SessionRow session = store.session(userId, sessionId, true)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        TaskRow task = store.task(userId, taskId, true)
+                .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        if (!"ACTIVE".equals(session.status()) || !"OBJECTIVE".equals(task.evaluationMode())
+                || !"IN_PROGRESS".equals(task.status())) {
+            throw new ApiException(HttpStatus.CONFLICT, "LEARNING_TASK_STATE_CONFLICT",
+                    "This objective task is not ready for completion.");
+        }
+        List<TaskRow> tasks = store.tasks(userId, sessionId);
+        if (tasks.stream().filter(item -> item.position() < task.position())
+                .anyMatch(item -> !"COMPLETED".equals(item.status())
+                        && !("PLANNER".equals(session.assignmentSource())
+                        && "EXPIRED".equals(item.status())))) {
+            throw new ApiException(HttpStatus.CONFLICT, "LEARNING_TASK_OUT_OF_ORDER",
+                    "Finish the earlier step first.");
+        }
+        if (!store.transitionTask(taskId, task.version(), "COMPLETED", actualMinutes, now)) {
+            throw new ApiException(HttpStatus.CONFLICT, "LEARNING_TASK_STATE_CONFLICT",
+                    "The task state has changed.");
+        }
+        long receipt = store.addReceipt(userId, "internal-objective-attempt-" + attemptId, "objective-check",
+                Long.toString(attemptId), taskId, "COMPLETED", now);
+        store.addEvent(taskId, userId, receipt, "IN_PROGRESS", "COMPLETED", null, now);
+        if (tasks.stream().allMatch(item -> item.id() == taskId || "COMPLETED".equals(item.status())
+                || (session.assignmentSource().equals("PLANNER") && "EXPIRED".equals(item.status())))) {
+            store.closeSession(sessionId, "COMPLETED", now);
+        }
+    }
+
+    @Override
     @Transactional
     public long assignPlanner(long userId,long goalId,long graphVersionId,
                               List<LearningQueries.PlannerSelection> selections,Instant now){
+        return assignPlannerValidated(userId,goalId,graphVersionId,selections,now,false);
+    }
+
+    @Override
+    @Transactional
+    public long assignAdaptivePlanner(long userId,long goalId,long graphVersionId,
+                                      List<LearningQueries.PlannerSelection> selections,Instant now){
+        return assignPlannerValidated(userId,goalId,graphVersionId,selections,now,true);
+    }
+
+    private long assignPlannerValidated(long userId,long goalId,long graphVersionId,
+            List<LearningQueries.PlannerSelection> selections,Instant now,boolean adaptive){
         if(selections.isEmpty() || selections.size()>3 || store.activeSession(userId,goalId).isPresent())
             throw new ApiException(HttpStatus.CONFLICT,"ACTIVE_LEARNING_SESSION",
                     "A learning session is already active or the plan is invalid.");
-        var available=store.activeVariants(graphVersionId).stream()
+        var available=(adaptive?store.activeAdaptiveVariants(graphVersionId):store.activeVariants(graphVersionId)).stream()
                 .collect(java.util.stream.Collectors.toMap(v->v.content().templateVersionId(),v->v));
         List<LearningStore.PlannerAssignedTask> tasks=new ArrayList<>();
         Set<Long> seen=new HashSet<>();
@@ -236,12 +376,17 @@ public class LearningService implements LearningQueries {
         if (prior != null) return new CommandOutcome(prior.resourceId(), prior.outcome(), true);
         TaskRow task = store.task(userId, taskId, true)
                 .orElseThrow(() -> notFound("LEARNING_TASK_NOT_FOUND"));
+        if (command.equals("complete") && "OBJECTIVE".equals(task.evaluationMode())) {
+            throw new ApiException(HttpStatus.CONFLICT, "OBJECTIVE_CHECK_REQUIRED",
+                    "Submit the objective check to complete this task.");
+        }
         if (!session.status().equals("ACTIVE")) {
             throw new ApiException(HttpStatus.CONFLICT, "LEARNING_SESSION_CLOSED", "The study session has ended.");
         }
         List<TaskRow> tasks = store.tasks(userId, sessionId);
         boolean previousComplete = tasks.stream().filter(item -> item.position() < task.position())
-                .allMatch(item -> item.status().equals("COMPLETED"));
+                .allMatch(item -> item.status().equals("COMPLETED")
+                        || (session.assignmentSource().equals("PLANNER") && item.status().equals("EXPIRED")));
         if (!previousComplete) {
             throw new ApiException(HttpStatus.CONFLICT, "LEARNING_TASK_OUT_OF_ORDER", "Finish the earlier step first.");
         }
@@ -266,7 +411,8 @@ public class LearningService implements LearningQueries {
         if (LearningTransitionPolicy.stopsSession(next)) {
             store.closeSession(sessionId, "STOPPED", now);
         } else if (next.equals("COMPLETED") && tasks.stream()
-                .allMatch(item -> item.id() == taskId || item.status().equals("COMPLETED"))) {
+                .allMatch(item -> item.id() == taskId || item.status().equals("COMPLETED")
+                        || (session.assignmentSource().equals("PLANNER") && item.status().equals("EXPIRED")))) {
             store.closeSession(sessionId, "COMPLETED", now);
         }
         return new CommandOutcome(taskId, next, false);
@@ -334,7 +480,7 @@ public class LearningService implements LearningQueries {
     }
 
     private void validateKey(String value) {
-        if (value == null || !KEY.matcher(value).matches())
+        if (value == null || !KEY.matcher(value).matches() || value.startsWith("internal-"))
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_IDEMPOTENCY_KEY", "Idempotency key is invalid.");
     }
     private void validateSequenceKey(String value) {

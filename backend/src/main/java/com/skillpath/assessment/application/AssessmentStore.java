@@ -60,6 +60,25 @@ public interface AssessmentStore {
 
     ResultRecord result(long sessionId);
 
+    Optional<TaskCheckDefinition> taskCheck(long templateVersionId, long graphVersionId);
+
+    Optional<TaskCheckSubmission> taskCheckSubmission(long taskId, long userId);
+
+    TaskCheckSubmission saveTaskCheck(long taskId, long userId, long goalId,
+                                      TaskCheckDefinition definition, String idempotencyKey,
+                                      String requestHash, List<String> selectedOptionIds,
+                                      int timeSpentSeconds, ObjectiveScoringPolicyV1.Evaluation evaluation,
+                                      Instant submittedAt);
+
+    List<TaskCheckHistoryQueries.FailureObservation> recentTaskChecks(long userId,long goalId,
+                                                                      long graphVersionId,Instant asOf);
+
+    record TaskCheckDefinition(long templateVersionId, long graphVersionId, String evaluatorVersion,
+                               ObjectiveQuestion question) {}
+
+    record TaskCheckSubmission(long attemptId, String idempotencyKey, String requestHash,
+                               BigDecimal score) {}
+
     record SessionRecord(
             long id,
             long userId,

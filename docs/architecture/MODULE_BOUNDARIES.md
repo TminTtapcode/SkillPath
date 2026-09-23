@@ -66,6 +66,13 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
   knowledge` without a reverse runtime dependency; the knowledge-owned mapping uses a
   database FK only for goal-template existence.
 - `review` alone advances review intervals. `progress` may expose `nextReviewAt` only as a derived snapshot received through the review contract.
+- Phase 7 removes Review's legacy direct write to `user_knowledge.next_review_at`.
+  Review owns `review_schedules`; Progress composes the public `nextReviewAt`
+  field through a bounded `review.application.ReviewScheduleQueries` read at the
+  same captured instant as its state read. The old nullable Progress column may
+  remain for compatibility but is not a schedule authority. Review never imports
+  or writes Progress persistence, and Planner reads separate Progress/Review
+  application snapshots, not a cross-module SQL join.
 - Phase 5 `learning` reads the owned active goal through `GoalQueries` and root-node compatibility through `LearningKnowledgeQueries`; it never imports goal/knowledge persistence. The learner explicitly starts a catalog sequence. In Phase 6, `LearningQueries` also exposes narrow immutable planner catalog/session/task views and validated assignment/supersession commands; Learning never ranks or publishes a Today plan.
 - The Phase 6 Planner reads or commands Goal, Knowledge, Progress,
   Review, and Learning **only through their public application contracts**. It
@@ -76,6 +83,18 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
 - Learning task completion in Phase 5 records engagement and audit only. The dotted Assessment dependency above is a later evaluated-task contract, not a Phase 5 runtime call.
 - Cross-module database joins are avoided in domain writes; dedicated read models may join through controlled query adapters.
 - Events are past tense facts, versioned, and idempotently consumed.
+- For Phase 7 evaluated attempts, Assessment emits versioned per-evidence facts;
+  Progress waits until every evidence row of `(attemptKind, attemptId)` is
+  projected before emitting one `EvidenceAccepted`. Review processes that
+  attempt once, updates only its own tables, and emits `PlanningInputsReady`
+  from the same transaction. Planner handles only that ready event for the
+  automatic evidence replan. Legacy v1 pending events remain on their
+  allowlisted handlers and cannot create a duplicate P7 ready event.
+- Planner owns the durable replan request, lease, retry, and result. Its
+  disabled-by-default worker calls Goal's public application lock and a Planner
+  `ReplanExecution` contract; it never reads Goal persistence or marks a request
+  complete without a transactional execution outcome. The production executor
+  is deferred to P7.4, so the worker gate must stay off in the P7.3 checkpoint.
 - The shared local outbox owns delivery mechanics only (lease, retry, terminal failure).
   `progress` owns evidence interpretation/projection and `review` owns intervals;
   handlers allowlist exact owner/type/version tuples.

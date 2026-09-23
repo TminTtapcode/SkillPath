@@ -209,12 +209,34 @@ const en = {
   'learning.validation':
     'Complete every checklist item and enter minutes spent (0–360).',
   'learning.goCatalog': 'Choose another sequence',
+  'learning.check.loading': 'Loading the objective check…',
+  'learning.check.title': 'Objective task check',
+  'learning.check.boundary':
+    'Your answer records observational evidence, not authoritative mastery.',
+  'learning.check.one': 'Choose one answer.',
+  'learning.check.many': 'Select all that apply.',
+  'learning.check.submit': 'Submit check and finish task',
+  'learning.check.continue': 'Continue to your session',
+  'learning.check.observed':
+    'Observed answer score: {score}%. This is not mastery.',
+  'learning.check.sessionBoundary':
+    'Self-reported activity is evidence-free. An objective check records evidence that is processed separately before any plan revision.',
   'planner.open': 'Open Today plan',
   'planner.title': "Today's learning plan",
   'planner.intro':
     'A small plan based on your current evidence, prerequisites, and daily budget.',
   'planner.generate': 'Generate Today plan',
   'planner.revise': 'Revise unstarted plan',
+  'planner.refresh': 'Refresh for today',
+  'planner.refreshNeeded':
+    'A new local day needs an explicit refresh. Your prior work is kept.',
+  'planner.override': 'Available minutes today',
+  'planner.overrideSave': 'Update time and request a replan',
+  'planner.replanPending':
+    'Review is complete; a new plan is pending or retrying. Keep your current tasks until it arrives.',
+  'planner.replanFailed':
+    'Automatic replanning needs attention. Your work and current plan remain saved.',
+  'planner.carried': 'Kept from an earlier plan',
   'planner.pending': 'Preparing your plan…',
   'planner.empty': 'No plan has been generated for today.',
   'planner.noSafe':
@@ -464,12 +486,34 @@ const vi: Record<TranslationKey, string> = {
   'learning.validation':
     'Hãy đánh dấu đủ các mục và nhập số phút đã học (0–360).',
   'learning.goCatalog': 'Chọn chuỗi học khác',
+  'learning.check.loading': 'Đang tải câu kiểm tra khách quan…',
+  'learning.check.title': 'Kiểm tra cho nhiệm vụ',
+  'learning.check.boundary':
+    'Câu trả lời tạo bằng chứng quan sát, không tự xác nhận mức thành thạo.',
+  'learning.check.one': 'Chọn một đáp án.',
+  'learning.check.many': 'Chọn tất cả đáp án phù hợp.',
+  'learning.check.submit': 'Nộp kiểm tra và hoàn thành nhiệm vụ',
+  'learning.check.continue': 'Tiếp tục phiên học',
+  'learning.check.observed':
+    'Điểm câu trả lời quan sát được: {score}%. Đây không phải mức thành thạo.',
+  'learning.check.sessionBoundary':
+    'Tự ghi nhận hoạt động không tạo bằng chứng. Câu kiểm tra khách quan tạo bằng chứng được xử lý riêng trước khi có thể điều chỉnh kế hoạch.',
   'planner.open': 'Mở kế hoạch hôm nay',
   'planner.title': 'Kế hoạch học hôm nay',
   'planner.intro':
     'Một kế hoạch ngắn dựa trên bằng chứng hiện có, điều kiện tiên quyết và thời gian mỗi ngày.',
   'planner.generate': 'Tạo kế hoạch hôm nay',
   'planner.revise': 'Lập lại kế hoạch chưa bắt đầu',
+  'planner.refresh': 'Làm mới cho hôm nay',
+  'planner.refreshNeeded':
+    'Đã sang ngày học mới. Hãy làm mới; phần việc trước đó vẫn được giữ.',
+  'planner.override': 'Số phút có thể học hôm nay',
+  'planner.overrideSave': 'Đổi thời gian và yêu cầu lập lại kế hoạch',
+  'planner.replanPending':
+    'Đã xử lý ôn tập; kế hoạch mới đang chờ hoặc thử lại. Hãy giữ task hiện tại đến khi có kết quả.',
+  'planner.replanFailed':
+    'Lập lại kế hoạch tự động cần được xử lý. Công việc và kế hoạch hiện tại vẫn được lưu.',
+  'planner.carried': 'Giữ lại từ kế hoạch trước',
   'planner.pending': 'Đang chuẩn bị kế hoạch…',
   'planner.empty': 'Hôm nay chưa có kế hoạch.',
   'planner.noSafe':

@@ -16,6 +16,22 @@ payloads with atomic supersession, and architecture tests proving Planner uses o
 other modules' public application contracts. Automatic evidence-driven replanning
 remains a Phase 7 test gate.
 
+For the P7.3 delivery checkpoint, verify clean V1–V24 and V23→V24 upgrades,
+unchanged pending requests, duplicate Review-ready intake, lease recovery,
+transactional executor rollback, bounded retry/dead-letter state, and two
+workers serialized on one owned Goal. The test executor is a fixture only:
+production worker activation and real plan-revision assertions require P7.4.
+
+P7.4/7.5 add clean/upgrade V25 checks, real Review-ready worker execution,
+immutable historical payload and carry-forward linkage, Learning-owned expiry,
+replan rollback/retry, day-local override idempotency and Goal non-mutation,
+and explicit next-day refresh with in-progress preservation. UI tests must
+distinguish `REFRESH_REQUIRED`, pending/failed replan, and carried work in both
+languages. Passing these targeted fixtures is not equivalent to the P7.6
+diagnostic → objective task check → Review → changed Today/roadmap golden path;
+keep both rollout flags off until full regression and fresh Compose browser
+acceptance pass.
+
 ## Test pyramid
 
 ### Unit

@@ -1,7 +1,11 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { getRoadmap, type Roadmap } from '../../shared/api/client'
+import {
+  getRoadmap,
+  getTodayReplanStatus,
+  type Roadmap,
+} from '../../shared/api/client'
 import { ErrorNotice, Loading } from '../../shared/components/AsyncState'
 import { useI18n, type TranslationKey } from '../../shared/i18n/I18n'
 
@@ -68,6 +72,11 @@ export function RoadmapPage() {
       last.hasMore ? (last.nextCursor ?? undefined) : undefined,
     retry: false,
   })
+  const replan = useQuery({
+    queryKey: ['today-replan-status'],
+    queryFn: getTodayReplanStatus,
+    retry: false,
+  })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const pages = query.data?.pages
   const consistent =
@@ -117,6 +126,16 @@ export function RoadmapPage() {
       {map.stale && (
         <p className="notice notice-error" role="status">
           {t('roadmap.stale')}
+        </p>
+      )}
+      {['PENDING', 'PROCESSING'].includes(replan.data?.status ?? '') && (
+        <p className="notice" role="status">
+          {t('planner.replanPending')}
+        </p>
+      )}
+      {replan.data?.status === 'FAILED' && (
+        <p className="notice notice-error" role="alert">
+          {t('planner.replanFailed')}
         </p>
       )}
       <div className="planner-actions">

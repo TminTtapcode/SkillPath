@@ -7,6 +7,7 @@ import java.util.Optional;
 public interface LearningStore {
     List<SequenceDefinition> activeSequences(long graphVersionId);
     List<PlannerVariant> activeVariants(long graphVersionId);
+    List<PlannerVariant> activeAdaptiveVariants(long graphVersionId);
     Optional<SequenceDefinition> activeSequence(long graphVersionId, String key);
     Optional<SessionRow> activeSession(long userId, long goalId);
     Optional<SessionRow> session(long userId, long sessionId, boolean lock);
@@ -16,6 +17,7 @@ public interface LearningStore {
     long createSession(long userId, long goalId, SequenceDefinition sequence, Instant now);
     long createPlannerSession(long userId, long goalId, long graphVersionId,
                              List<PlannerAssignedTask> tasks, Instant now);
+    List<TaskRow> appendPlannerTasks(long userId,long sessionId,List<PlannerAssignedTask> tasks,Instant now);
     boolean transitionTask(long taskId, long version, String status, Integer actualMinutes, Instant now);
     void closeSession(long sessionId, String status, Instant now);
     void addEvent(long taskId, long userId, long commandId, String from, String to, String reason, Instant now);

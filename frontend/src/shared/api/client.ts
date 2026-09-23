@@ -22,7 +22,13 @@ export type LearningSession = components['schemas']['LearningSessionResponse']
 export type LearningTask = components['schemas']['LearningTaskResponse']
 export type LearningStart = components['schemas']['LearningStartResponse']
 export type LearningCommand = components['schemas']['LearningCommandResponse']
+export type TaskCheck = components['schemas']['TaskCheckResponse']
+export type TaskCheckAnswer = components['schemas']['TaskCheckAnswerRequest']
+export type TaskCheckAttempt = components['schemas']['TaskCheckAttemptResponse']
 export type TodayPlan = components['schemas']['TodayPlanResponse']
+export type ReplanStatus = components['schemas']['ReplanStatusResponse']
+export type AvailableMinutesResult =
+  components['schemas']['AvailableMinutesResponse']
 export type Roadmap = components['schemas']['RoadmapResponse']
 export interface KnowledgeState {
   knowledgeNodeId: string
@@ -154,6 +160,22 @@ export const reviseTodayPlan = (key: string) =>
     headers: { 'Idempotency-Key': key },
   })
 
+export const refreshTodayPlan = (key: string) =>
+  request<TodayPlan>('/api/v1/learning/today/refresh', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': key },
+  })
+
+export const overrideTodayMinutes = (availableMinutes: number, key: string) =>
+  request<AvailableMinutesResult>('/api/v1/learning/today/available-minutes', {
+    method: 'PUT',
+    headers: { 'Idempotency-Key': key },
+    body: JSON.stringify({ availableMinutes }),
+  })
+
+export const getTodayReplanStatus = () =>
+  request<ReplanStatus>('/api/v1/learning/today/replan-status')
+
 export const getRoadmap = (cursor?: string) =>
   request<Roadmap>(
     cursor
@@ -236,6 +258,25 @@ export const commandLearningTask = (
       method: 'POST',
       headers: { 'Idempotency-Key': key },
       ...(body ? { body: JSON.stringify(body) } : {}),
+    },
+  )
+
+export const getTaskCheck = (taskId: string) =>
+  request<TaskCheck>(
+    `/api/v1/learning/tasks/${encodeURIComponent(taskId)}/check`,
+  )
+
+export const submitTaskCheck = (
+  taskId: string,
+  answer: TaskCheckAnswer,
+  key: string,
+) =>
+  request<TaskCheckAttempt>(
+    `/api/v1/learning/tasks/${encodeURIComponent(taskId)}/check/attempts`,
+    {
+      method: 'POST',
+      headers: { 'Idempotency-Key': key },
+      body: JSON.stringify(answer),
     },
   )
 

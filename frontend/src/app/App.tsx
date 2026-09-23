@@ -18,6 +18,7 @@ import { LearningCatalogPage } from '../features/learning/LearningCatalogPage'
 import { LearningSessionPage } from '../features/learning/LearningSessionPage'
 import { TodayPage } from '../features/planner/TodayPage'
 import { RoadmapPage } from '../features/planner/RoadmapPage'
+import { SystemArchitectureGraph } from '../features/onboarding/SystemArchitectureGraph'
 import { I18nProvider, LanguageSelector, useI18n } from '../shared/i18n/I18n'
 import { Navbar } from '../shared/components/Navbar'
 
@@ -86,6 +87,7 @@ function AppContent() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/goals/new" element={<GoalSetupPage />} />
+            <Route path="/onboarding/architecture" element={<SystemArchitectureGraph />} />
             <Route path="/goal" element={<ActiveGoalPage />} />
             <Route path="/assessment/diagnostic" element={<DiagnosticPage />} />
             <Route path="/knowledge" element={<KnowledgeStatePage />} />

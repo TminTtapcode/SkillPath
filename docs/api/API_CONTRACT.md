@@ -156,6 +156,23 @@ mastery, user ID, assignment source, or planner decision. The content snapshot i
 both languages; locale affects only presentation, never command hashes or task history.
 Self-report records engagement only and cannot change Knowledge State or Review.
 
+Phase 7 introduces an objective task check behind the disabled-by-default
+`skillpath.phase7.task-check-enabled` rollout gate:
+
+```http
+GET  /learning/tasks/{taskId}/check
+POST /learning/tasks/{taskId}/check/attempts
+```
+
+The GET returns a pinned single/multiple-choice question with localized option
+labels and stable IDs, never an answer key. POST requires CSRF and
+`Idempotency-Key`, validates the owned, started `OBJECTIVE` task, and atomically
+records one attempt/evidence handoff and Learning completion. An identical retry
+returns the attempt; another key or payload for that task conflicts. Score is
+observational, not mastery. Ordinary `/complete` rejects `OBJECTIVE` tasks.
+The task-check gate remains off until a freshly built end-to-end learner flow has
+been validated; the P6 catalog does not assign these variants.
+
 Phase 6 adds explicit, authenticated Today and roadmap routes:
 
 ```http
@@ -178,7 +195,24 @@ candidate exists, `NO_ELIGIBLE_VARIANT` when candidates are blocked or unsafe, o
 `NO_TIME_FIT_VARIANT` when available content exceeds the stored budget. A goal
 completion candidate is not a completed Goal.
 The UI treats diagnostic evidence, knowledge estimates, and planner reasons as
-different authorities. Phase 7 retains time overrides and automatic replanning.
+different authorities.
+
+Phase 7 adds the following authenticated, owner-scoped day commands and read:
+
+```http
+PUT  /learning/today/available-minutes
+POST /learning/today/refresh
+GET  /learning/today/replan-status
+```
+
+Both writes require CSRF and `Idempotency-Key`. PUT accepts only an integer
+`availableMinutes` in 1–180, audits a local-day override without changing Goal,
+and queues a durable replan. GET remains side-effect-free and reports pending,
+processing, completed, or terminal-failed request state without claiming the
+plan already changed. A missed-day Today read returns `REFRESH_REQUIRED`; only
+the explicit refresh expires old unstarted planner assignments. `planner-v2`
+revisions carry completed/in-progress task references to their original
+immutable decisions instead of duplicating Learning task IDs.
 
 ### Progress
 

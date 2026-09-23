@@ -93,4 +93,12 @@ class ArchitectureTest {
                 .resideInAPackage("..planner.infrastructure.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void assessmentTaskCheckUsesOnlyLearningApplicationContracts() {
+        noClasses().that().resideInAPackage("..assessment..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..learning.infrastructure..", "..learning.api..", "..learning.domain..")
+                .check(classes);
+    }
 }

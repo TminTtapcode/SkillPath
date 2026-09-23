@@ -8,6 +8,7 @@ import com.skillpath.assessment.domain.ObjectiveQuestion;
 import com.skillpath.assessment.domain.ObjectiveScoringPolicyV1;
 import com.skillpath.goal.application.GoalQueries;
 import com.skillpath.knowledge.application.AssessmentKnowledgeQueries;
+import com.skillpath.learning.application.EvaluatedTaskCommands;
 import com.skillpath.shared.api.ApiException;
 import com.skillpath.shared.localization.SupportedLocale;
 import java.math.BigDecimal;
@@ -31,7 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class AssessmentService {
+public class AssessmentService implements TaskCheckHistoryQueries {
 
     private static final int DIAGNOSTIC_QUESTION_COUNT = 8;
     private static final Duration SESSION_DURATION = Duration.ofDays(7);
@@ -40,6 +41,7 @@ public class AssessmentService {
     private final AssessmentStore store;
     private final GoalQueries goalQueries;
     private final AssessmentKnowledgeQueries knowledgeQueries;
+    private final EvaluatedTaskCommands evaluatedTasks;
     private final Clock clock;
     private final ObjectiveScoringPolicyV1 scoringPolicy = new ObjectiveScoringPolicyV1();
 
@@ -47,11 +49,79 @@ public class AssessmentService {
             AssessmentStore store,
             GoalQueries goalQueries,
             AssessmentKnowledgeQueries knowledgeQueries,
+            EvaluatedTaskCommands evaluatedTasks,
             Clock clock) {
         this.store = store;
         this.goalQueries = goalQueries;
         this.knowledgeQueries = knowledgeQueries;
+        this.evaluatedTasks = evaluatedTasks;
         this.clock = clock;
+    }
+
+    @Transactional(readOnly = true)
+    public TaskCheckView taskCheck(long userId, long taskId, SupportedLocale locale) {
+        var task=evaluatedTasks.taskForCheck(userId,taskId);
+        var definition=store.taskCheck(task.templateVersionId(),task.graphVersionId())
+                .orElseThrow(()->new ApiException(HttpStatus.CONFLICT,"TASK_CHECK_UNAVAILABLE",
+                        "No compatible objective check is available for this task."));
+        var presented=presentation(definition.question(),locale);
+        return new TaskCheckView(Long.toString(taskId),Long.toString(task.graphVersionId()),
+                Long.toString(definition.question().versionId()),definition.question().type().name(),
+                task.status(),presented.prompt(),presented.options().stream()
+                .map(option->new QuestionOptionView(option.id(),option.label())).toList());
+    }
+
+    @Transactional
+    public TaskCheckAttemptView submitTaskCheck(long userId,long taskId,String key,TaskCheckAnswer answer) {
+        validateIdempotencyKey(key);
+        if(answer==null || answer.selectedOptionIds()==null || answer.selectedOptionIds().isEmpty()
+                || answer.selectedOptionIds().size()>20 || answer.selectedOptionIds().stream()
+                .anyMatch(id->id==null || id.isBlank() || id.length()>120)
+                || answer.timeSpentSeconds()<0 || answer.timeSpentSeconds()>3600
+                || answer.actualMinutes()<0 || answer.actualMinutes()>360) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_TASK_CHECK_ANSWER",
+                    "Task check answer is invalid.");
+        }
+        var task=evaluatedTasks.taskForCheck(userId,taskId);
+        List<String> sorted=new ArrayList<>(answer.selectedOptionIds());
+        sorted.sort(String::compareTo);
+        String requestHash=hashText(taskId+"|"+String.join(",",sorted)+"|"
+                +answer.timeSpentSeconds()+"|"+answer.actualMinutes());
+        var prior=store.taskCheckSubmission(taskId,userId).orElse(null);
+        if(prior!=null){
+            if(!prior.idempotencyKey().equals(key)||!prior.requestHash().equals(requestHash))
+                throw new ApiException(HttpStatus.CONFLICT,"TASK_CHECK_ALREADY_SUBMITTED",
+                        "This task check was already submitted with different input.");
+            return new TaskCheckAttemptView(Long.toString(prior.attemptId()),prior.score(),true);
+        }
+        if(!"ACTIVE".equals(task.sessionStatus())||!"IN_PROGRESS".equals(task.status()))
+            throw new ApiException(HttpStatus.CONFLICT,"LEARNING_TASK_STATE_CONFLICT",
+                    "Start this task before submitting its check.");
+        var definition=store.taskCheck(task.templateVersionId(),task.graphVersionId())
+                .orElseThrow(()->new ApiException(HttpStatus.CONFLICT,"TASK_CHECK_UNAVAILABLE",
+                        "No compatible objective check is available for this task."));
+        ObjectiveScoringPolicyV1.Evaluation evaluation;
+        try{evaluation=scoringPolicy.evaluate(definition.question(),answer.selectedOptionIds());}
+        catch(IllegalArgumentException exception){
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,"INVALID_ANSWER_SELECTION",exception.getMessage());
+        }
+        Instant now=clock.instant();
+        var saved=store.saveTaskCheck(taskId,userId,task.goalId(),definition,key,requestHash,
+                answer.selectedOptionIds(),answer.timeSpentSeconds(),evaluation,now);
+        evaluatedTasks.completeCheckedTask(userId,taskId,saved.attemptId(),answer.actualMinutes(),now);
+        return new TaskCheckAttemptView(Long.toString(saved.attemptId()),saved.score(),false);
+    }
+
+    public record TaskCheckView(String taskId,String graphVersionId,String questionVersionId,
+                                String type,String taskStatus,String prompt,List<QuestionOptionView> options) {}
+    public record TaskCheckAnswer(List<String> selectedOptionIds,int timeSpentSeconds,int actualMinutes) {}
+    public record TaskCheckAttemptView(String attemptId,BigDecimal score,boolean replayed) {}
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskCheckHistoryQueries.FailureObservation> recentTaskChecks(long userId,long goalId,
+                                                                            long graphVersionId,Instant asOf) {
+        return store.recentTaskChecks(userId,goalId,graphVersionId,asOf);
     }
 
     @Transactional
@@ -346,6 +416,10 @@ public class AssessmentService {
                 : command.selfConfidence().stripTrailingZeros().toPlainString();
         String canonical = command.sessionQuestionId() + "|" + String.join(",", sorted) + "|"
                 + confidence + "|" + command.timeSpentSeconds();
+        return hashText(canonical);
+    }
+
+    private String hashText(String canonical){
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8)));
