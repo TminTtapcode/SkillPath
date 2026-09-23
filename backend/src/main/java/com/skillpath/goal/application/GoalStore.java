@@ -27,4 +27,8 @@ public interface GoalStore {
             String timezone,
             int defaultDailyMinutes,
             Instant now);
+
+    void pauseActiveAndActivate(long userId, long targetGoalId, Instant now);
+
+    void pauseActive(long userId, Instant now);
 }

@@ -17,6 +17,7 @@ public record UserGoal(
 
     public enum Status {
         ACTIVE,
+        PAUSED,
         COMPLETED,
         CANCELLED
     }

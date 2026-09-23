@@ -74,6 +74,15 @@ public class GoalController {
         return GoalResponse.from(goalService.activeGoal(principal.userId()));
     }
 
+    @PostMapping("/goals/{goalId}/activate")
+    ResponseEntity<Void> activate(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @org.springframework.web.bind.annotation.PathVariable String goalId) {
+        goalService.switchGoal(principal.userId(), idempotencyKey, goalId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/goal-templates/{goalTemplateId}/graph")
     ResponseEntity<KnowledgeGraphService.GoalGraphView> graph(
             @org.springframework.web.bind.annotation.PathVariable String goalTemplateId,

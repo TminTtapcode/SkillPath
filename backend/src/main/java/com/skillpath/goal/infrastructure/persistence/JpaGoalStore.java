@@ -72,6 +72,29 @@ class JpaGoalStore implements GoalStore {
                 userId, templateId, targetDate, timezone, defaultDailyMinutes, now)));
     }
 
+    @Override
+    public void pauseActiveAndActivate(long userId, long targetGoalId, Instant now) {
+        goalRepository.findByUserIdAndStatusForUpdate(userId, UserGoal.Status.ACTIVE)
+                .ifPresent(active -> {
+                    active.status = UserGoal.Status.PAUSED;
+                    active.updatedAt = now;
+                });
+        goalRepository.findByIdAndUserIdForUpdate(targetGoalId, userId)
+                .ifPresent(target -> {
+                    target.status = UserGoal.Status.ACTIVE;
+                    target.updatedAt = now;
+                });
+    }
+
+    @Override
+    public void pauseActive(long userId, Instant now) {
+        goalRepository.findByUserIdAndStatusForUpdate(userId, UserGoal.Status.ACTIVE)
+                .ifPresent(active -> {
+                    active.status = UserGoal.Status.PAUSED;
+                    active.updatedAt = now;
+                });
+    }
+
     private GoalTemplate map(GoalTemplateEntity entity) {
         return map(entity, null);
     }

@@ -37,6 +37,7 @@ export function LearningSessionPage() {
   const [reason, setReason] = useState<'TIME' | 'DIFFICULT' | 'OTHER'>(
     'DIFFICULT',
   )
+  const [activeTab, setActiveTab] = useState<'learn' | 'practice' | 'check'>('learn')
   const pending = useRef<PendingCommand | null>(null)
   const session = useQuery({
     queryKey: ['learning-session', id],
@@ -134,52 +135,136 @@ export function LearningSessionPage() {
           <h2 id="learning-task-title">{task.title}</h2>
           <p className="task-category">{t(activityKeys[task.activityType])}</p>
           <p>{task.instructions}</p>
-          <div className="learning-resource">
-            <h3>{task.resourceTitle}</h3>
-            <p>{task.resourceBody}</p>
-          </div>
-          {task.status === 'IN_PROGRESS' &&
-            task.evaluationMode !== 'OBJECTIVE' && (
-              <>
-                <fieldset className="learning-checklist">
-                  <legend>{t('learning.checklist')}</legend>
-                  {task.checklist.map((item) => (
-                    <label key={item.id}>
-                      <input
-                        type="checkbox"
-                        checked={checked.includes(item.id)}
-                        onChange={(event) =>
-                          setChecked(
-                            event.target.checked
-                              ? [...checked, item.id]
-                              : checked.filter((id) => id !== item.id),
-                          )
-                        }
-                        disabled={command.isPending}
-                      />
-                      {item.label}
-                    </label>
-                  ))}
-                </fieldset>
-                <label className="learning-minutes">
-                  {t('learning.actualMinutes')}
-                  <input
-                    type="number"
-                    min="0"
-                    max="360"
-                    step="1"
-                    aria-describedby="learning-completion-hint"
-                    aria-invalid={actualMinutes !== '' && !validMinutes}
-                    value={actualMinutes}
-                    onChange={(event) => setActualMinutes(event.target.value)}
+          <nav className="learning-tabs" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+            <button
+              className={activeTab === 'learn' ? 'active' : ''}
+              style={{ background: 'none', border: 'none', borderBottom: activeTab === 'learn' ? '2px solid var(--primary-color)' : 'none', padding: '0.5rem 1rem', cursor: 'pointer' }}
+              onClick={() => setActiveTab('learn')}
+            >
+              {t('learning.activity.LEARN')}
+            </button>
+            <button
+              className={activeTab === 'practice' ? 'active' : ''}
+              style={{ background: 'none', border: 'none', borderBottom: activeTab === 'practice' ? '2px solid var(--primary-color)' : 'none', padding: '0.5rem 1rem', cursor: 'pointer' }}
+              onClick={() => setActiveTab('practice')}
+            >
+              {t('learning.activity.PRACTICE')}
+            </button>
+            <button
+              className={activeTab === 'check' ? 'active' : ''}
+              style={{ background: 'none', border: 'none', borderBottom: activeTab === 'check' ? '2px solid var(--primary-color)' : 'none', padding: '0.5rem 1rem', cursor: 'pointer' }}
+              onClick={() => setActiveTab('check')}
+            >
+              Check
+            </button>
+          </nav>
+
+          {activeTab === 'learn' && (
+            <div className="learning-resource">
+              <h3>{task.resourceTitle}</h3>
+              <p>{task.resourceBody}</p>
+            </div>
+          )}
+
+          {activeTab === 'practice' && (
+            <div className="learning-practice">
+              <p>Practice exercises will load here.</p>
+            </div>
+          )}
+
+          {activeTab === 'check' && (
+            <>
+              {task.status === 'IN_PROGRESS' && task.evaluationMode !== 'OBJECTIVE' && (
+                <>
+                  <fieldset className="learning-checklist">
+                    <legend>{t('learning.checklist')}</legend>
+                    {task.checklist.map((item) => (
+                      <label key={item.id}>
+                        <input
+                          type="checkbox"
+                          checked={checked.includes(item.id)}
+                          onChange={(event) =>
+                            setChecked(
+                              event.target.checked
+                                ? [...checked, item.id]
+                                : checked.filter((id) => id !== item.id),
+                            )
+                          }
+                          disabled={command.isPending}
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <label className="learning-minutes">
+                    {t('learning.actualMinutes')}
+                    <input
+                      type="number"
+                      min="0"
+                      max="360"
+                      step="1"
+                      aria-describedby="learning-completion-hint"
+                      aria-invalid={actualMinutes !== '' && !validMinutes}
+                      value={actualMinutes}
+                      onChange={(event) => setActualMinutes(event.target.value)}
+                      disabled={command.isPending}
+                    />
+                  </label>
+                  <p className="form-hint" id="learning-completion-hint">
+                    {t('learning.validation')}
+                  </p>
+                </>
+              )}
+              {['ASSIGNED', 'IN_PROGRESS'].includes(task.status) && (
+                <label className="learning-reason">
+                  {t('learning.reason')}
+                  <select
+                    value={reason}
+                    onChange={(event) =>
+                      setReason(
+                        event.target.value as 'TIME' | 'DIFFICULT' | 'OTHER',
+                      )
+                    }
                     disabled={command.isPending}
-                  />
+                  >
+                    <option value="DIFFICULT">
+                      {t('learning.reason.DIFFICULT')}
+                    </option>
+                    <option value="TIME">{t('learning.reason.TIME')}</option>
+                    <option value="OTHER">{t('learning.reason.OTHER')}</option>
+                  </select>
                 </label>
-                <p className="form-hint" id="learning-completion-hint">
-                  {t('learning.validation')}
-                </p>
-              </>
-            )}
+              )}
+              {task.status === 'IN_PROGRESS' &&
+                task.evaluationMode === 'OBJECTIVE' && (
+                  <TaskCheckPanel
+                    taskId={task.id}
+                    onComplete={() => void session.refetch()}
+                  />
+                )}
+              {command.error && (
+                <>
+                  <ErrorNotice error={command.error} />
+                  {pending.current && (
+                    <button
+                      className="button-secondary"
+                      disabled={command.isPending}
+                      onClick={() => command.mutate(pending.current!)}
+                    >
+                      {t('learning.retry')}
+                    </button>
+                  )}
+                  <button
+                    className="button-secondary"
+                    onClick={() => void session.refetch()}
+                  >
+                    {t('learning.sync')}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
           {['ASSIGNED', 'IN_PROGRESS'].includes(task.status) && (
             <label className="learning-reason">
               {t('learning.reason')}
@@ -253,33 +338,6 @@ export function LearningSessionPage() {
               </button>
             )}
           </div>
-          {task.status === 'IN_PROGRESS' &&
-            task.evaluationMode === 'OBJECTIVE' && (
-              <TaskCheckPanel
-                taskId={task.id}
-                onComplete={() => void session.refetch()}
-              />
-            )}
-          {command.error && (
-            <>
-              <ErrorNotice error={command.error} />
-              {pending.current && (
-                <button
-                  className="button-secondary"
-                  disabled={command.isPending}
-                  onClick={() => command.mutate(pending.current!)}
-                >
-                  {t('learning.retry')}
-                </button>
-              )}
-              <button
-                className="button-secondary"
-                onClick={() => void session.refetch()}
-              >
-                {t('learning.sync')}
-              </button>
-            </>
-          )}
         </article>
       )}
       <p className="next-step-notice">

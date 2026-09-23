@@ -177,6 +177,7 @@ describe('learner-selected learning', () => {
     expect(
       await screen.findByRole('heading', { name: 'Learn flow' }),
     ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
     fireEvent.click(screen.getByLabelText('I read it'))
     fireEvent.click(screen.getByLabelText('I traced it'))
     fireEvent.change(screen.getByLabelText('Minutes spent'), {

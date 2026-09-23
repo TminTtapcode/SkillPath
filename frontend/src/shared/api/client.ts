@@ -22,6 +22,7 @@ export type LearningSession = components['schemas']['LearningSessionResponse']
 export type LearningTask = components['schemas']['LearningTaskResponse']
 export type LearningStart = components['schemas']['LearningStartResponse']
 export type LearningCommand = components['schemas']['LearningCommandResponse']
+export type PracticeExercise = { id: number, position: number, prompt: string, starterCode: string | null, expectedOutput: string | null }
 export type TaskCheck = components['schemas']['TaskCheckResponse']
 export type TaskCheckAnswer = components['schemas']['TaskCheckAnswerRequest']
 export type TaskCheckAttempt = components['schemas']['TaskCheckAttemptResponse']
@@ -190,6 +191,12 @@ export const createGoal = (input: CreateGoalInput, idempotencyKey: string) =>
     body: JSON.stringify(input),
   })
 
+export const switchGoal = (goalId: string, idempotencyKey: string = crypto.randomUUID()) =>
+  request<void>(`/api/v1/goals/${encodeURIComponent(goalId)}/activate`, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+  })
+
 export const startDiagnostic = () =>
   request<AssessmentSession>('/api/v1/assessments/diagnostic', {
     method: 'POST',
@@ -259,6 +266,11 @@ export const commandLearningTask = (
       headers: { 'Idempotency-Key': key },
       ...(body ? { body: JSON.stringify(body) } : {}),
     },
+  )
+
+export const getTaskPractices = (templateVersionId: string) =>
+  request<PracticeExercise[]>(
+    `/api/v1/learning/tasks/${encodeURIComponent(templateVersionId)}/practices`,
   )
 
 export const getTaskCheck = (taskId: string) =>

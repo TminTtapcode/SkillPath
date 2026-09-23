@@ -110,17 +110,28 @@ public final class PlannerPolicyV1 {
         List<Choice> selected = new ArrayList<>();
         Set<Long> used = new HashSet<>();
         int remaining = input.availableMinutes();
+        int reviewBudget = Math.min(input.availableMinutes(), 180);
+        int reviewConsumed = 0;
         while(selected.size()<3){
             int available=remaining;
+            boolean reviewPriority = reviewConsumed < reviewBudget && choices.stream()
+                    .anyMatch(c -> c.reasons().contains("REVIEW_DUE") 
+                            && c.variant().minutes() <= available 
+                            && !used.contains(c.variant().templateVersionId()));
+            
             Choice choice=choices.stream()
                     .filter(candidate->candidate.variant().minutes()<=available)
                     .filter(candidate->!used.contains(candidate.variant().templateVersionId()))
+                    .filter(candidate-> !reviewPriority || candidate.reasons().contains("REVIEW_DUE"))
                     .map(candidate->rescore(candidate,available,due,input.projectionAsOf()))
                     .sorted(PlannerPolicyV1::compareChoices).findFirst().orElse(null);
             if(choice==null)break;
             selected.add(choice);
             used.add(choice.variant().templateVersionId());
             remaining-=choice.variant().minutes();
+            if(choice.reasons().contains("REVIEW_DUE")) {
+                reviewConsumed += choice.variant().minutes();
+            }
         }
         boolean allMastered = input.nodes().stream().filter(node -> node.status().equals("ACTIVE"))
                 .allMatch(node -> mastery(states.get(node.id())).compareTo(node.requiredMastery()) >= 0);

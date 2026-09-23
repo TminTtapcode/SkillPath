@@ -9,6 +9,7 @@ import {
 } from '../../shared/api/client'
 import { ErrorNotice, Loading } from '../../shared/components/AsyncState'
 import { useI18n } from '../../shared/i18n/I18n'
+import { GoalSwitcher } from './GoalSwitcher'
 
 export function ActiveGoalPage() {
   const { t } = useI18n()
@@ -76,6 +77,16 @@ export function ActiveGoalPage() {
         >
           {logoutMutation.isPending ? t('goal.signingOut') : t('goal.signOut')}
         </button>
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <GoalSwitcher 
+          currentGoalId={String(goal.data?.id ?? '')} 
+          allGoals={[
+            { id: String(goal.data?.id ?? ''), title: 'Current Learning Track', status: 'ACTIVE' },
+            { id: 'mock-paused-1', title: 'Data Structures Track (Paused)', status: 'PAUSED' }
+          ]} 
+        />
       </div>
 
       <article className="today-task-card" aria-labelledby="today-task-title">

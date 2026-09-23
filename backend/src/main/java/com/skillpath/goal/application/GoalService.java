@@ -119,9 +119,7 @@ public class GoalService implements GoalQueries {
 
         goalStore.findActiveTemplate(templateId)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "GOAL_TEMPLATE_UNAVAILABLE", "Goal template is unavailable."));
-        if (goalStore.findActiveByUserId(userId).isPresent()) {
-            throw new ApiException(HttpStatus.CONFLICT, "ACTIVE_GOAL_ALREADY_EXISTS", "Only one active goal is allowed.");
-        }
+        goalStore.pauseActive(userId, now);
 
         try {
             UserGoal goal = goalStore.create(
@@ -136,6 +134,18 @@ public class GoalService implements GoalQueries {
         } catch (DataIntegrityViolationException exception) {
             throw new ApiException(HttpStatus.CONFLICT, "ACTIVE_GOAL_ALREADY_EXISTS", "Only one active goal is allowed.");
         }
+    }
+
+    @Transactional
+    public void switchGoal(long userId, String idempotencyKey, String targetGoalIdStr) {
+        validateIdempotencyKey(idempotencyKey);
+        long targetGoalId = parseOpaqueId(targetGoalIdStr);
+        Instant now = clock.instant();
+        
+        goalStore.findByIdAndUserId(targetGoalId, userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND", "Goal not found."));
+                
+        goalStore.pauseActiveAndActivate(userId, targetGoalId, now);
     }
 
     private void validateIdempotencyKey(String key) {
