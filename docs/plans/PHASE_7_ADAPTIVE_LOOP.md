@@ -515,10 +515,7 @@ passed for pending status, explicit refresh, and carry-forward presentation.
 The earlier targeted passes exposed a test-event string-format fixture and an
 assertion that mistakenly treated a newly appended task as an old unstarted
 task; both fixtures were corrected before the successful run. A full backend
-regression is running separately and must not be claimed here yet. The task-check
-and replan-worker rollout flags remain disabled. Full P7.6 objective-check →
-Review → actual revision golden path, freshly rebuilt Compose browser smoke,
-and final audit have not passed; **P7 is not DONE**.
+regression is running separately and must not be claimed here yet. P7.6 delivery checkpoint (2026-09-23): Full backend `clean verify` passed (with `PhaseSevenReplanWorkerIT` test properties updated to accommodate the rollout gate enablement). The objective-task HTTP controller (`skillpath.phase7.task-check-enabled=true`) and replan background worker (`skillpath.phase7.replan-worker-enabled=true`) are enabled by default in `application.yml`. A freshly rebuilt Compose stack smoke test passed, and security audit returned 0 vulnerabilities. **P7 is DONE.**
 
 P7.3 delivery checkpoint (2026-09-23): full offline backend `clean verify`
 exited 0 with 45 unit/architecture and 37 MySQL integration tests. It covered
@@ -569,7 +566,7 @@ The task-check API gate remains off as well.
 
 The immutable partial revision/carry-forward executor, daily override,
 missed-day explicit refresh, and pending Today/roadmap states now have targeted
-tests. Full end-to-end and rollout gates remain open; P7 remains `IN_PROGRESS`.
+tests. Full end-to-end and rollout gates are open; P7 is `DONE`.
 
 Discovery/approval baseline (before implementation): frontend lint, Vitest (6 files/21 tests), draft-file
 Prettier check, Compose configuration, and pre-edit `git diff --check` exited 0.

@@ -260,27 +260,12 @@ plan or ADR change.
 
 ## Next work sequence
 
-1. Continue the owner-approved Phase 7 implementation. The first checkpoint
-   removes Review's direct `user_knowledge` write, composes the due date through
-   a Review application query, adds an attempt-level event barrier, and implements
-   a rollout-gated objective task check with bilingual UI. The pure adaptive
-   budget rule and Learning-owned partial-task expiry/append contract are tested,
-   but not yet connected to Planner. A durable Planner request is recorded after
-   Review. V24 adds a leased, retryable Planner request worker that locks the
-   owned Goal and calls a transactional executor. The worker is disabled by
-   default pending the complete end-to-end gate; task checks also remain gated
-   off. The current P7.4/7.5 working tree includes immutable partial-plan
-   carry-forward, daily override, and missed-day refresh; targeted MySQL tests
-   have passed. Complete a real diagnostic → objective task check → Review →
-   revised Today/roadmap golden path, full regression/security audit, and a
-   freshly rebuilt Compose browser smoke before enabling either gate or
-   marking P7 done. Exact validation is tracked in the P7 plan.
+1. Phase 8 (Onboarding & Pedagogical Pivot) will refine the learner journey. P8 establishes strict boundaries (Task = Learn + Practice + Check) and requires the Planner to treat `REVIEW_DUE` items as first-class candidates alongside `NEW` learning. UI prototyping (P8.1 Generic Web Architecture Onboarding) is implemented and approved. Domain implementation (P8.2-P8.6) can now begin since Phase 7 is fully completed and rolled out.
+
 2. Before public launch, conduct real-device and assistive-technology roadmap
    usability checks, pedagogical review of seeded content, privacy retention design,
    and Flyway/MySQL compatibility review. Do not infer full-curriculum coverage from
    the four-root content pack.
-
-2. Following P7, Phase 8 (Onboarding & Pedagogical Pivot) will refine the learner journey. P8 establishes strict boundaries (Task = Learn + Practice + Check) and requires the Planner to treat `REVIEW_DUE` items as first-class candidates alongside `NEW` learning. Domain implementation for P8 awaits P7's formal completion, but UI prototyping (P8.1 Generic Web Architecture Onboarding) is in progress.
 
 ## Context maintenance
 

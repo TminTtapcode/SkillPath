@@ -34,7 +34,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(properties={"debug=false","skillpath.outbox.enabled=false"})
+@SpringBootTest(properties={"debug=false","skillpath.outbox.enabled=false","skillpath.phase7.replan-worker-enabled=false"})
 @AutoConfigureMockMvc
 @Testcontainers
 class PhaseSevenReplanWorkerIT {
