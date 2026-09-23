@@ -37,7 +37,7 @@ class GoalBudgetMigrationUpgradeIT {
         assertThat(Flyway.configure().dataSource(MYSQL.getJdbcUrl(),
                 MYSQL.getUsername(),MYSQL.getPassword())
                 .locations("classpath:db/migration").load().migrate().targetSchemaVersion)
-                .isEqualTo("25");
+                .isEqualTo("26");
         try(var connection=DriverManager.getConnection(MYSQL.getJdbcUrl(),
                 MYSQL.getUsername(),MYSQL.getPassword());var statement=connection.createStatement()){
             try(var row=statement.executeQuery("SELECT default_daily_minutes FROM user_goals "
