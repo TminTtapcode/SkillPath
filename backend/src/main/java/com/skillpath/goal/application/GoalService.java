@@ -72,6 +72,17 @@ public class GoalService implements GoalQueries {
         return new ActiveGoalView(goal.id(), goal.goalTemplateId(), goal.status().name());
     }
 
+    @Override
+    @Transactional
+    public PlanningGoal planningGoalForUser(long userId, boolean lock) {
+        UserGoal goal = (lock ? goalStore.findActiveByUserIdForUpdate(userId)
+                : goalStore.findActiveByUserId(userId))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                        "ACTIVE_GOAL_NOT_FOUND", "No active goal exists."));
+        return new PlanningGoal(goal.id(), goal.goalTemplateId(), goal.targetDate(),
+                goal.timezone(), goal.defaultDailyMinutes(), goal.status().name());
+    }
+
     @Transactional
     public CreationResult create(long userId, String idempotencyKey, CreateGoal command) {
         validateIdempotencyKey(idempotencyKey);
@@ -81,8 +92,8 @@ public class GoalService implements GoalQueries {
                 || !command.targetDate().isAfter(LocalDate.now(clock.withZone(zone)))) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "TARGET_DATE_MUST_BE_FUTURE", "Target date must be in the future.");
         }
-        if (command.defaultDailyMinutes() < 30 || command.defaultDailyMinutes() > 180) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_DAILY_MINUTES", "Daily minutes must be between 30 and 180.");
+        if (command.defaultDailyMinutes() < 20 || command.defaultDailyMinutes() > 180) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_DAILY_MINUTES", "Daily minutes must be between 20 and 180.");
         }
 
         String requestHash = hash(templateId, command);

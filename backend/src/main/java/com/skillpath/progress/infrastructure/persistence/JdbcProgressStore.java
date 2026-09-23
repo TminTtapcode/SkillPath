@@ -44,6 +44,21 @@ public class JdbcProgressStore implements ProgressStore {
                 (rs,n)->new Evidence(Dimension.valueOf(rs.getString(1)),rs.getBigDecimal(2),rs.getBigDecimal(3),rs.getTimestamp(4).toInstant(),rs.getLong(5)), userId,nodeId);
     }
 
+    @Override public List<Evidence> evidenceForGraph(long userId, long graphVersionId, long nodeId, Instant asOf) {
+        return jdbc.query("SELECT dimension,score,reliability,observed_at,source_event_id FROM knowledge_evidence "
+                        + "WHERE user_id=? AND graph_version_id=? AND knowledge_node_id=? AND observed_at<=? "
+                        + "ORDER BY observed_at,source_event_id",
+                (rs,n)->new Evidence(Dimension.valueOf(rs.getString(1)),rs.getBigDecimal(2),
+                        rs.getBigDecimal(3),rs.getTimestamp(4).toInstant(),rs.getLong(5)),
+                userId,graphVersionId,nodeId,Timestamp.from(asOf));
+    }
+
+    @Override public boolean hasEvidenceOutsideGraph(long userId, long graphVersionId, long nodeId) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM knowledge_evidence WHERE user_id=? "
+                + "AND knowledge_node_id=? AND graph_version_id<>?", Integer.class, userId,nodeId,graphVersionId);
+        return count != null && count > 0;
+    }
+
     @Override public StateSnapshot saveProjection(long userId,long graphVersionId,long nodeId,Projection p,Instant at) {
         List<StateSnapshot> before=jdbc.query("SELECT acquisition_status,mastery_score FROM user_knowledge WHERE user_id=? AND knowledge_node_id=? FOR UPDATE",
                 (rs,n)->new StateSnapshot(rs.getString(1),null,rs.getBigDecimal(2),null),userId,nodeId);

@@ -135,6 +135,23 @@ export function ActiveGoalPage() {
         </Link>
       </article>
 
+      <article
+        className="learning-sequence"
+        aria-labelledby="today-plan-link-title"
+      >
+        <p className="eyebrow">Today · Planner v1</p>
+        <h2 id="today-plan-link-title">{t('planner.title')}</h2>
+        <p>{t('planner.intro')}</p>
+        <div className="planner-actions">
+          <Link className="button-link" to="/today">
+            {t('planner.open')}
+          </Link>
+          <Link className="button-link button-secondary" to="/roadmap">
+            {t('roadmap.open')}
+          </Link>
+        </div>
+      </article>
+
       <div>
         <h3 className="metadata-heading">{t('goal.specifications')}</h3>
         <dl className="metadata-grid">

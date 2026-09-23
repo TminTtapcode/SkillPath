@@ -22,7 +22,8 @@ class LearningMigrationUpgradeIT {
         Flyway.configure().dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
                 .locations("classpath:db/migration").target(MigrationVersion.fromVersion("13")).load().migrate();
         assertThat(Flyway.configure().dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
-                .locations("classpath:db/migration").load().migrate().targetSchemaVersion).isEqualTo("16");
+                .locations("classpath:db/migration").target(MigrationVersion.fromVersion("16"))
+                .load().migrate().targetSchemaVersion).isEqualTo("16");
         try (var connection = DriverManager.getConnection(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
             try (var rows = statement.executeQuery("SELECT COUNT(*),SUM(v.estimated_minutes) FROM learning_sequence_items i JOIN task_template_versions v ON v.id=i.task_template_version_id WHERE i.sequence_id=14001")) {

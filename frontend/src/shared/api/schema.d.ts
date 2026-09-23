@@ -548,6 +548,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/learning/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTodayPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/today/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["generateTodayPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/today/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHistoricalTodayPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/learning/today/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviseTodayPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roadmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRoadmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -591,7 +671,7 @@ export interface components {
         };
         LearningSessionResponse: {
             id: string;
-            sequenceKey: string;
+            sequenceKey?: string | null;
             title: string;
             /** @enum {string} */
             status: "ACTIVE" | "COMPLETED" | "STOPPED";
@@ -620,6 +700,63 @@ export interface components {
         LearningReasonRequest: {
             /** @enum {string} */
             reasonCode: "TIME" | "DIFFICULT" | "OTHER";
+        };
+        TodayPlanItem: {
+            taskId: string;
+            nodeId: string;
+            nodeName: string;
+            title: string;
+            status: string;
+            minutes: number;
+            priorityScore: number;
+            reasons: string[];
+        };
+        TodayPlanResponse: {
+            planId?: string | null;
+            outcome: string;
+            /** @description NO_CONTENT, NO_ELIGIBLE_VARIANT, or NO_TIME_FIT_VARIANT for a no-plan outcome */
+            reasonCode: string | null;
+            revision: number;
+            budgetMinutes: number;
+            graphVersionId?: string | null;
+            plannerPolicyVersion?: string | null;
+            /** Format: date-time */
+            projectionAsOf?: string | null;
+            sessionId?: string | null;
+            activeManualSessionId?: string | null;
+            items: components["schemas"]["TodayPlanItem"][];
+            alternatives: string[];
+        };
+        RoadmapNode: {
+            id: string;
+            slug: string;
+            name: string;
+            knowledgeStatus: string;
+            current: boolean;
+            ready: boolean;
+            blockedBy: string[];
+        };
+        RoadmapEdge: {
+            sourceId: string;
+            targetId: string;
+            type: string;
+            strength: number;
+        };
+        RoadmapResponse: {
+            graphVersionId: string;
+            knowledgeStatePolicyVersion: string;
+            plannerPolicyVersion: string;
+            progressDigest: string;
+            reviewDigest: string;
+            /** Format: date-time */
+            projectionAsOf: string;
+            planId?: string | null;
+            revision: number;
+            stale: boolean;
+            hasMore: boolean;
+            nextCursor: string | null;
+            nodes: components["schemas"]["RoadmapNode"][];
+            edges: components["schemas"]["RoadmapEdge"][];
         };
         CsrfResponse: {
             headerName: string;
@@ -1887,6 +2024,155 @@ export interface operations {
                     "application/json": components["schemas"]["LearningCommandResponse"];
                 };
             };
+            409: components["responses"]["Problem"];
+        };
+    };
+    getTodayPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current local-day plan or not-generated state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    generateTodayPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing plan or idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            /** @description New plan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    getHistoricalTodayPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owned immutable plan revision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    reviseTodayPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-XSRF-TOKEN": components["parameters"]["CsrfHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            /** @description New immutable revision */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayPlanResponse"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    getRoadmap: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: {
+                /** @description Preferred learner presentation language. Unsupported values fall back to English. */
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version-stamped read-only goal map */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoadmapResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
         };
     };

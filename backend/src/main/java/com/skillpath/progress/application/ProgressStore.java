@@ -11,6 +11,8 @@ public interface ProgressStore {
     void lockProjection(long userId, long graphVersionId, long nodeId, Instant now);
     boolean append(SourceEvidence evidence, Instant ingestedAt);
     List<Evidence> evidence(long userId, long nodeId);
+    List<Evidence> evidenceForGraph(long userId, long graphVersionId, long nodeId, Instant asOf);
+    boolean hasEvidenceOutsideGraph(long userId, long graphVersionId, long nodeId);
     StateSnapshot saveProjection(long userId, long graphVersionId, long nodeId, Projection projection, Instant projectedAt);
     List<StateRow> states(long userId, int limit, long afterId);
     StateRow state(long userId, long nodeId);

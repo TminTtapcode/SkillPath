@@ -74,4 +74,23 @@ class ArchitectureTest {
                 .should().dependOnClassesThat().resideInAPackage("..learning.infrastructure.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void plannerUsesOnlyOtherModulesApplicationContracts() {
+        noClasses().that().resideInAPackage("..planner..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..goal.infrastructure..", "..knowledge.infrastructure..",
+                        "..progress.infrastructure..", "..review.infrastructure..",
+                        "..learning.infrastructure..", "..goal.api..", "..knowledge.api..",
+                        "..progress.api..", "..review.api..", "..learning.api..")
+                .check(classes);
+        noClasses().that().resideInAPackage("..planner..")
+                .should().dependOnClassesThat().haveFullyQualifiedName(
+                        "com.skillpath.learning.application.LearningStore")
+                .check(classes);
+        noClasses().that().resideOutsideOfPackage("..planner.infrastructure.persistence..")
+                .should().dependOnClassesThat()
+                .resideInAPackage("..planner.infrastructure.persistence..")
+                .check(classes);
+    }
 }

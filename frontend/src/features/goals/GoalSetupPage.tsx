@@ -22,7 +22,7 @@ function futureDate(days: number) {
   return date.toISOString().slice(0, 10)
 }
 
-const MINUTE_OPTIONS = [30, 45, 60, 90, 120, 180]
+const MINUTE_OPTIONS = [20, 30, 45, 60, 90, 120, 180]
 
 export function GoalSetupPage() {
   const { t } = useI18n()
@@ -38,7 +38,7 @@ export function GoalSetupPage() {
         goalTemplateId: z.string().min(1, t('validation.goal')),
         targetDate: z.string().min(1, t('validation.targetDate')),
         timezone: z.string().min(1, t('validation.timezoneRequired')),
-        defaultDailyMinutes: z.number().int().min(30).max(180),
+        defaultDailyMinutes: z.number().int().min(20).max(180),
       }),
     [t],
   )

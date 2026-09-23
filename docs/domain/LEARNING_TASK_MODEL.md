@@ -28,7 +28,7 @@ Maps a task to one or more nodes with `role` (`PRIMARY`, `SUPPORTING`, `PREREQUI
 
 ### LearningTask
 
-An assigned instance containing `user_id`, `user_goal_id`, `template_id/version`, `assignment_source`, nullable `planner_decision_id`, `status`, planned duration, bilingual task payload snapshot, assigned/start/completion timestamps, and optimistic version. Exactly one provenance applies: `LEARNER_SELECTED` requires a null planner decision; future `PLANNER` requires a non-null decision. Browser commands cannot submit either authority field.
+An assigned instance containing `user_id`, `user_goal_id`, `template_id/version`, `assignment_source`, nullable `planner_decision_id`, `status`, planned duration, bilingual task payload snapshot, assigned/start/completion timestamps, and optimistic version. Exactly one provenance applies: `LEARNER_SELECTED` requires a null planner decision; Phase 6 `PLANNER` requires a non-null decision. Browser commands cannot submit either authority field.
 
 Status transitions:
 

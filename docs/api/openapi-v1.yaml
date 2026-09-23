@@ -571,6 +571,53 @@ paths:
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LearningReasonRequest' } } } }
       responses: { '200': { description: Task abandoned and session stopped, content: { application/json: { schema: { $ref: '#/components/schemas/LearningCommandResponse' } } } }, '409': { $ref: '#/components/responses/Problem' } }
+  /api/v1/learning/today:
+    get:
+      operationId: getTodayPlan
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '200': { description: Current local-day plan or not-generated state, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/today/generate:
+    post:
+      operationId: generateTodayPlan
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }, { $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '201': { description: New plan, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '200': { description: Existing plan or idempotent replay, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/today/plans/{id}:
+    get:
+      operationId: getHistoricalTodayPlan
+      security: [{ cookieSession: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '200': { description: Owned immutable plan revision, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/learning/today/revise:
+    post:
+      operationId: reviseTodayPlan
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfHeader' }, { $ref: '#/components/parameters/IdempotencyHeader' }, { $ref: '#/components/parameters/AcceptLanguage' }]
+      responses:
+        '201': { description: New immutable revision, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '200': { description: Idempotent replay, content: { application/json: { schema: { $ref: '#/components/schemas/TodayPlanResponse' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/roadmap:
+    get:
+      operationId: getRoadmap
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/AcceptLanguage' }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+      responses:
+        '200': { description: Version-stamped read-only goal map, content: { application/json: { schema: { $ref: '#/components/schemas/RoadmapResponse' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     cookieSession:
@@ -682,10 +729,10 @@ components:
         checklist: { type: array, items: { $ref: '#/components/schemas/LearningChecklistStep' } }
     LearningSessionResponse:
       type: object
-      required: [id, sequenceKey, title, status, graphVersionId, assignmentSource, startedAt, tasks]
+      required: [id, title, status, graphVersionId, assignmentSource, startedAt, tasks]
       properties:
         id: { type: string }
-        sequenceKey: { type: string }
+        sequenceKey: { type: [string, 'null'] }
         title: { type: string }
         status: { type: string, enum: [ACTIVE, COMPLETED, STOPPED] }
         graphVersionId: { type: string }
@@ -717,6 +764,70 @@ components:
       required: [reasonCode]
       properties:
         reasonCode: { type: string, enum: [TIME, DIFFICULT, OTHER] }
+    TodayPlanItem:
+      type: object
+      required: [taskId, nodeId, nodeName, title, status, minutes, priorityScore, reasons]
+      properties:
+        taskId: { type: string }
+        nodeId: { type: string }
+        nodeName: { type: string }
+        title: { type: string }
+        status: { type: string }
+        minutes: { type: integer, minimum: 1 }
+        priorityScore: { type: number, minimum: 0, maximum: 100 }
+        reasons: { type: array, items: { type: string } }
+    TodayPlanResponse:
+      type: object
+      required: [outcome, reasonCode, revision, budgetMinutes, items, alternatives]
+      properties:
+        planId: { type: [string, 'null'] }
+        outcome: { type: string }
+        reasonCode: { type: [string, 'null'], description: 'NO_CONTENT, NO_ELIGIBLE_VARIANT, or NO_TIME_FIT_VARIANT for a no-plan outcome' }
+        revision: { type: integer, minimum: 0 }
+        budgetMinutes: { type: integer, minimum: 1 }
+        graphVersionId: { type: [string, 'null'] }
+        plannerPolicyVersion: { type: [string, 'null'] }
+        projectionAsOf: { type: [string, 'null'], format: date-time }
+        sessionId: { type: [string, 'null'] }
+        activeManualSessionId: { type: [string, 'null'] }
+        items: { type: array, items: { $ref: '#/components/schemas/TodayPlanItem' } }
+        alternatives: { type: array, items: { type: string } }
+    RoadmapNode:
+      type: object
+      required: [id, slug, name, knowledgeStatus, current, ready, blockedBy]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        knowledgeStatus: { type: string }
+        current: { type: boolean }
+        ready: { type: boolean }
+        blockedBy: { type: array, items: { type: string } }
+    RoadmapEdge:
+      type: object
+      required: [sourceId, targetId, type, strength]
+      properties:
+        sourceId: { type: string }
+        targetId: { type: string }
+        type: { type: string }
+        strength: { type: number, minimum: 0, maximum: 1 }
+    RoadmapResponse:
+      type: object
+      required: [graphVersionId, knowledgeStatePolicyVersion, plannerPolicyVersion, progressDigest, reviewDigest, projectionAsOf, revision, stale, hasMore, nextCursor, nodes, edges]
+      properties:
+        graphVersionId: { type: string }
+        knowledgeStatePolicyVersion: { type: string }
+        plannerPolicyVersion: { type: string }
+        progressDigest: { type: string }
+        reviewDigest: { type: string }
+        projectionAsOf: { type: string, format: date-time }
+        planId: { type: [string, 'null'] }
+        revision: { type: integer, minimum: 0 }
+        stale: { type: boolean }
+        hasMore: { type: boolean }
+        nextCursor: { type: [string, 'null'] }
+        nodes: { type: array, items: { $ref: '#/components/schemas/RoadmapNode' } }
+        edges: { type: array, items: { $ref: '#/components/schemas/RoadmapEdge' } }
     CsrfResponse:
       type: object
       required: [headerName, parameterName, token]
@@ -762,7 +873,7 @@ components:
         goalTemplateId: { type: string }
         targetDate: { type: string, format: date }
         timezone: { type: string, maxLength: 64 }
-        defaultDailyMinutes: { type: integer, minimum: 30, maximum: 180 }
+        defaultDailyMinutes: { type: integer, minimum: 20, maximum: 180 }
     GoalResponse:
       type: object
       required: [id, goalTemplateId, targetDate, timezone, defaultDailyMinutes, status, version]

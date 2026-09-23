@@ -31,6 +31,12 @@ flowchart TD
 
 ### DailyPlanDecision và PlannerDecision
 
+Phase 6 lấy `now` một lần từ server và dùng chính giá trị đó làm
+`projectionAsOf` cho **toàn bộ** planning snapshot: effective knowledge state,
+review due, misconception, signals, explanations và roadmap overlay. Mọi input
+động dùng cùng mốc này; graph, catalog và policy version được pin trong snapshot.
+Không module nào tự thay `projectionAsOf` bằng lần đọc clock riêng.
+
 Một planner run trả `DailyPlanDecision` chứa 1–3 `PlannerDecision` có thứ tự, tổng
 estimated minutes, remaining minutes, input snapshot, graph version và policy version.
 Mỗi item decision trả về `task_id`, `knowledge_node_ids`, `activity_type`,
@@ -185,6 +191,10 @@ Knowledge node không phải task. Sau khi chọn node, chọn activity theo sta
 
 Task variant phải active, đúng graph version, phù hợp duration và không lặp variant gần nhất nếu có lựa chọn tương đương.
 
+Trong Phase 6 chỉ có variant curated `LEARN`, `PRACTICE`, `RECALL` đủ điều kiện
+giao task. Các activity khác trong bảng là định hướng domain, chưa được tạo giả
+khi thiếu content hoặc evaluator tương ứng.
+
 ### Today-plan composition
 
 Planner chọn tối đa 3 item. Sau mỗi lựa chọn, trừ estimated minutes khỏi remaining
@@ -245,15 +255,28 @@ plan(context):
 
 Nếu không có recommendation cho item đầu tiên:
 
-1. Nếu mọi node mastered: chọn review due hoặc trả `GOAL_COMPLETED`.
+1. Nếu mọi node có vẻ đã mastered: chọn review due nếu có; nếu không, trả
+   `GOAL_COMPLETION_CANDIDATE`. Planner không chuyển Goal sang completed. Goal sở hữu
+   policy và transition cuối cùng với các kiểm tra confidence/application khác.
 2. Nếu tất cả bị khóa: chọn prerequisite chưa đạt gần nhất.
-3. Nếu thiếu task phù hợp thời gian: trả micro-assessment ngắn.
+3. Nếu thiếu task phù hợp thời gian trong Phase 6: trả
+   `NO_SAFE_RECOMMENDATION`/`NO_TIME_FIT_VARIANT` và đề nghị thêm thời gian.
+   Micro-assessment chỉ được dùng sau khi có content/evaluator và policy được duyệt;
+   không tái sử dụng diagnostic baseline hoặc tạo task giả.
 4. Nếu graph/task config lỗi: trả `NO_SAFE_RECOMMENDATION`, ghi operational alert; không để AI tự bịa task không kiểm soát.
 
 ## 11. Audit và explainability
 
 Mỗi item decision lưu snapshot hash và top 3 candidate với signal breakdown. Daily
 plan lưu ordered item decisions và remaining budget. UI giải thích ngắn, ví dụ:
+
+Snapshot, decision và nội dung mỗi plan revision đã lưu là immutable. Revision mới
+chỉ được tạo bằng bản ghi mới có liên kết supersession tới revision cũ; việc đổi
+current/superseded marker phải atomic. Phase 6 chỉ revision khi mọi planner task
+cũ còn `ASSIGNED`; Phase 7 mới xử lý replan sau evidence, missed day và time override.
+Planner chỉ giao tiếp Goal, Knowledge, Progress, Review và Learning qua public
+application contracts, không import/query repository, entity, persistence adapter,
+controller hoặc cross-module SQL join.
 
 > Học REST API tiếp theo vì đây là khoảng trống lớn, phù hợp 20 phút và mở khóa Spring Boot.
 

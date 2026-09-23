@@ -17,6 +17,13 @@ import {
 const en = {
   'app.badge': 'Adaptive Planner',
   'app.tagline': 'One clear next step',
+  'nav.today': 'Today',
+  'nav.roadmap': 'Roadmap',
+  'nav.learning': 'Learn',
+  'nav.knowledge': 'Knowledge',
+  'nav.goal': 'Goal',
+  'nav.diagnostic': 'Diagnostic',
+  'nav.menu': 'Menu',
   'language.label': 'Language',
   'language.vi': 'Tiếng Việt',
   'language.en': 'English',
@@ -202,6 +209,61 @@ const en = {
   'learning.validation':
     'Complete every checklist item and enter minutes spent (0–360).',
   'learning.goCatalog': 'Choose another sequence',
+  'planner.open': 'Open Today plan',
+  'planner.title': "Today's learning plan",
+  'planner.intro':
+    'A small plan based on your current evidence, prerequisites, and daily budget.',
+  'planner.generate': 'Generate Today plan',
+  'planner.revise': 'Revise unstarted plan',
+  'planner.pending': 'Preparing your plan…',
+  'planner.empty': 'No plan has been generated for today.',
+  'planner.noSafe':
+    'No safe task fits the current graph and available content today.',
+  'planner.noContent':
+    'No curated task is available for the current learning frontier yet.',
+  'planner.timeFit':
+    'No complete task variant fits your daily budget. More time or curated content is needed.',
+  'planner.candidate':
+    'The goal may be ready for completion review; only Goal can make the final decision.',
+  'planner.budget': '{minutes} minutes available',
+  'planner.remaining': '{minutes} minutes unallocated',
+  'planner.reason': 'Why this task',
+  'planner.reason.GOAL_RELEVANT_GAP': 'A relevant knowledge gap',
+  'planner.reason.UNLOCKS_DEPENDENCIES': 'Unlocks later concepts',
+  'planner.reason.REVIEW_DUE': 'Review is due',
+  'planner.reason.TIME_FIT': 'Fits today’s time',
+  'planner.status.ASSIGNED': 'Ready to start',
+  'planner.status.IN_PROGRESS': 'In progress',
+  'planner.status.COMPLETED': 'Completed',
+  'planner.alternatives': 'Other relevant concepts',
+  'planner.start': 'Open assigned session',
+  'planner.manual':
+    'A self-selected session is active. Finish it before generating Today.',
+  'planner.selfReport':
+    'Completing these self-check tasks records activity, not mastery. Automatic replan arrives in Phase 7.',
+  'roadmap.open': 'Open visual roadmap',
+  'roadmap.title': 'Goal roadmap',
+  'roadmap.intro':
+    'The same pinned graph and knowledge snapshot used for Today.',
+  'roadmap.stale':
+    'This plan uses an older snapshot. Review or revise it before treating it as current.',
+  'roadmap.current': 'In Today plan',
+  'roadmap.ready': 'Ready',
+  'roadmap.blocked': 'Blocked',
+  'roadmap.status': 'Knowledge status',
+  'roadmap.status.UNKNOWN': 'Not assessed',
+  'roadmap.status.LEARNING': 'Learning',
+  'roadmap.status.PROVISIONAL': 'Provisional',
+  'roadmap.status.MASTERED': 'Mastered',
+  'roadmap.status.REVIEW_DUE': 'Review due',
+  'roadmap.prerequisites': 'Blocked by prerequisites',
+  'roadmap.list': 'Accessible concept list',
+  'roadmap.diagram': 'Prerequisite diagram',
+  'roadmap.none': 'No concept is selected.',
+  'roadmap.loadMore': 'Show more concepts',
+  'roadmap.loadingMore': 'Loading concepts…',
+  'roadmap.snapshotChanged':
+    'The roadmap changed. Reload it to view one consistent snapshot.',
 } as const
 
 type TranslationKey = keyof typeof en
@@ -210,6 +272,13 @@ type Replacements = Record<string, string | number>
 const vi: Record<TranslationKey, string> = {
   'app.badge': 'Lộ trình thích ứng',
   'app.tagline': 'Một bước tiếp theo rõ ràng',
+  'nav.today': 'Hôm nay',
+  'nav.roadmap': 'Lộ trình',
+  'nav.learning': 'Bài học',
+  'nav.knowledge': 'Năng lực',
+  'nav.goal': 'Mục tiêu',
+  'nav.diagnostic': 'Đánh giá',
+  'nav.menu': 'Menu',
   'language.label': 'Ngôn ngữ',
   'language.vi': 'Tiếng Việt',
   'language.en': 'English',
@@ -395,6 +464,61 @@ const vi: Record<TranslationKey, string> = {
   'learning.validation':
     'Hãy đánh dấu đủ các mục và nhập số phút đã học (0–360).',
   'learning.goCatalog': 'Chọn chuỗi học khác',
+  'planner.open': 'Mở kế hoạch hôm nay',
+  'planner.title': 'Kế hoạch học hôm nay',
+  'planner.intro':
+    'Một kế hoạch ngắn dựa trên bằng chứng hiện có, điều kiện tiên quyết và thời gian mỗi ngày.',
+  'planner.generate': 'Tạo kế hoạch hôm nay',
+  'planner.revise': 'Lập lại kế hoạch chưa bắt đầu',
+  'planner.pending': 'Đang chuẩn bị kế hoạch…',
+  'planner.empty': 'Hôm nay chưa có kế hoạch.',
+  'planner.noSafe':
+    'Hiện không có task an toàn phù hợp với đồ thị và nội dung đã biên soạn.',
+  'planner.noContent':
+    'Chưa có bài học được biên soạn cho phần kiến thức cần học tiếp.',
+  'planner.timeFit':
+    'Chưa có task hoàn chỉnh vừa thời gian mỗi ngày. Cần thêm thời gian hoặc nội dung phù hợp.',
+  'planner.candidate':
+    'Mục tiêu có thể đủ điều kiện xem xét hoàn tất; chỉ module Goal quyết định cuối cùng.',
+  'planner.budget': 'Có {minutes} phút',
+  'planner.remaining': 'Còn {minutes} phút chưa phân bổ',
+  'planner.reason': 'Vì sao chọn task này',
+  'planner.reason.GOAL_RELEVANT_GAP': 'Có khoảng trống kiến thức liên quan',
+  'planner.reason.UNLOCKS_DEPENDENCIES': 'Mở khóa các khái niệm tiếp theo',
+  'planner.reason.REVIEW_DUE': 'Đã đến lịch ôn tập',
+  'planner.reason.TIME_FIT': 'Vừa thời gian hôm nay',
+  'planner.status.ASSIGNED': 'Sẵn sàng bắt đầu',
+  'planner.status.IN_PROGRESS': 'Đang học',
+  'planner.status.COMPLETED': 'Đã hoàn thành',
+  'planner.alternatives': 'Khái niệm liên quan khác',
+  'planner.start': 'Mở phiên học được giao',
+  'planner.manual':
+    'Bạn đang có phiên học tự chọn. Hãy kết thúc phiên đó trước khi tạo kế hoạch hôm nay.',
+  'planner.selfReport':
+    'Hoàn thành các task tự kiểm tra chỉ ghi nhận hoạt động, không xác nhận mức thành thạo. Tự động lập lại kế hoạch thuộc Phase 7.',
+  'roadmap.open': 'Mở sơ đồ lộ trình',
+  'roadmap.title': 'Sơ đồ mục tiêu',
+  'roadmap.intro':
+    'Cùng đồ thị và snapshot kiến thức đã dùng cho kế hoạch hôm nay.',
+  'roadmap.stale':
+    'Kế hoạch này dùng snapshot cũ. Hãy xem lại hoặc lập lại trước khi coi là hiện hành.',
+  'roadmap.current': 'Trong kế hoạch hôm nay',
+  'roadmap.ready': 'Sẵn sàng',
+  'roadmap.blocked': 'Đang bị khóa',
+  'roadmap.status': 'Trạng thái kiến thức',
+  'roadmap.status.UNKNOWN': 'Chưa đánh giá',
+  'roadmap.status.LEARNING': 'Đang học',
+  'roadmap.status.PROVISIONAL': 'Tạm thời',
+  'roadmap.status.MASTERED': 'Đã thành thạo',
+  'roadmap.status.REVIEW_DUE': 'Đến lịch ôn tập',
+  'roadmap.prerequisites': 'Bị khóa bởi điều kiện tiên quyết',
+  'roadmap.list': 'Danh sách khái niệm có thể truy cập',
+  'roadmap.diagram': 'Sơ đồ điều kiện tiên quyết',
+  'roadmap.none': 'Chưa chọn khái niệm.',
+  'roadmap.loadMore': 'Xem thêm khái niệm',
+  'roadmap.loadingMore': 'Đang tải khái niệm…',
+  'roadmap.snapshotChanged':
+    'Lộ trình đã thay đổi. Hãy tải lại để xem cùng một bản chụp.',
 }
 
 interface I18nValue {

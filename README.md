@@ -18,8 +18,7 @@ Backend Intern template, create one active goal, reload it, and sign out.
 
 Phase 2 adds the published, versioned Java Backend knowledge graph. Clients can query
 goal graphs, nodes, prerequisites, and dependents; curator/admin sessions can validate
-and atomically publish successor graph versions. The visual learner roadmap remains a
-later phase.
+and atomically publish successor graph versions.
 
 Phase 3 adds an eight-question learner diagnostic with safe resume, objective
 deterministic scoring, idempotent attempts, concept-level evidence, and a durable
@@ -29,14 +28,19 @@ evidence, not mastery or a learning recommendation.
 Phase 4 consumes that handoff through an idempotent leased outbox, preserves an
 append-only evidence ledger, and builds deterministic `knowledge-state-v1` projections
 with time-decayed effective mastery and confidence. Learners can inspect the localized
-state at `/knowledge`; `review-interval-v1` schedules mastered concepts. A personalized
-Today plan is intentionally still a later phase.
+state at `/knowledge`; `review-interval-v1` schedules mastered concepts.
 
 Phase 5 adds a learner-selected, project-authored 30-minute Java Backend foundation
 sequence at `/learning`. It has learn, practice, and recall steps with bilingual
 content, safe resume, and idempotent task commands. Completing these self-reported
-steps records activity only; it does not grade work or change mastery. Personalized
-Today planning remains Phase 6 work.
+steps records activity only; it does not grade work or change mastery.
+
+Phase 6 adds explicit deterministic Today planning at `/today` and a
+version-pinned, paged visual roadmap at `/roadmap`. Plans fit the stored daily budget, explain
+their selected tasks, and preserve immutable revisions. The roadmap uses a
+dependency-free SVG with a semantic concept list. This phase does not automatically
+replan after evidence, change mastery from self-report, or complete a goal. Phase 6
+validation and remaining launch risks are tracked in `docs/plans/PHASE_6_PLANNER.md`.
 
 The current learner journey is available in Vietnamese and English. New browsers default
 to Vietnamese, the header selector persists the browser preference, and localized goal,

@@ -44,8 +44,9 @@ curriculum/goal graphs and curated content, not as planner code branches.
 Phase 5 adds a `learning` module with a Flyway-owned resource/task/sequence catalog,
 learner-owned execution sessions, pinned bilingual task content, and idempotent audit
 transitions. The React UI exposes an explicitly learner-selected study sequence from
-the command center. The personalized Today plan and visual roadmap still await
-Planner; marking a task complete cannot mutate evidence or mastery.
+the command center. Phase 6 adds explicit deterministic Today generation and a
+read-only visual roadmap from one pinned planning snapshot. Marking a task complete
+still cannot mutate evidence or mastery; automatic replanning remains Phase 7.
 
 ## Learner roadmap projection
 
@@ -56,9 +57,10 @@ exposes the mutually exclusive `knowledgeStatus` (`UNKNOWN`, `LEARNING`,
 `current`, `ready`, and `blocked`, and exposes prerequisite explanations.
 
 The projection is read-only and version-stamped. It cannot mutate mastery, waive a
-prerequisite, or complete a goal. For large graphs, the API supports bounded
-neighborhoods/progressive disclosure instead of requiring the client to render every
-node and edge at once.
+prerequisite, or complete a goal. Phase 6 bounds the whole published graph to 200
+nodes and renders the initial 17-node curriculum with dependency-free SVG and a
+semantic list. Cursored neighborhoods/progressive disclosure for larger graphs are
+still open work; the server rejects oversized graphs rather than silently truncating.
 
 ## Communication
 

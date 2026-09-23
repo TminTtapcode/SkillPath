@@ -10,6 +10,12 @@ API checks, and frontend start/resume/retry/terminal-state checks. A self-report
 completion must leave Assessment, Progress, and Review row counts unchanged. The UI
 must never present the curated sequence as a personalized Today plan.
 
+The approved Phase 6 gates require one captured `projectionAsOf` for every dynamic
+snapshot input and roadmap overlay, immutable historical snapshot/decision/revision
+payloads with atomic supersession, and architecture tests proving Planner uses only
+other modules' public application contracts. Automatic evidence-driven replanning
+remains a Phase 7 test gate.
+
 ## Test pyramid
 
 ### Unit
@@ -135,3 +141,30 @@ tests listed above.
 - Frontend tests cover default Vietnamese, persisted English selection, locale headers,
   `Asia/Ho_Chi_Minh`, and selection preservation while a question is re-rendered in the
   other language.
+
+## Phase 6 executable gates
+
+- `PlannerPolicyV1Test` fixes prerequisite direction/threshold, mastered-source
+  exclusion, time-fit/no-content reasons, deterministic ordering, and the
+  non-authoritative completion-candidate outcome.
+- `PhaseSixFlowIT` applies V1–V20 to clean MySQL 8.4 and exercises explicit
+  generation, CSRF, idempotent replay/conflict, immutable revision, owner-scoped
+  history, concurrent generation/revision convergence, rollback on a forced planner
+  item insert failure, paged roadmap snapshot/cursor ownership, manual-session
+  conflict, hard budget, and started-task revision rejection.
+  `PlannerMigrationUpgradeIT` covers V16–V19 upgrade.
+- ArchUnit prevents Planner from importing other modules' API, infrastructure, or
+  Learning store types. Frontend tests assert GET purity, explicit generation,
+  semantic roadmap representation, 50-node page expansion, mismatched-snapshot
+  refusal, locale refetch, and prerequisite direction. `PlannerRoadmapSnapshotTest` covers
+  50/200-node pagination, cross-page edges, incompatible progress, and stale plans.
+- Full backend `clean verify`, generated OpenAPI types, frontend format/lint/test/build,
+  Compose configuration, and secret/dependency audit passed for Phase 6. The
+  [visual-map spike](../research/PHASE_6_VISUAL_MAP_SPIKE.md) records the same-fixture
+  library comparison and a narrow-headless Chromium layout check. Real-device and
+  assistive-technology usability remain pre-public-launch checks.
+- `GoalBudgetMigrationUpgradeIT` checks V19-to-V20 with an existing Goal row,
+  accepting 20 and rejecting 19 at MySQL. Phase 6 API integration creates a
+  20-minute Goal, generates a plan under that stored budget, and rejects 19-minute
+  input; the frontend exposes the 20-minute choice. Earlier 30–180 minute Goal
+  behavior remains a regression gate.

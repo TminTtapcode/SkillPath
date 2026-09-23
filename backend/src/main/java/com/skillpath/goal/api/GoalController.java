@@ -113,7 +113,7 @@ public class GoalController {
             @NotBlank String goalTemplateId,
             @NotNull LocalDate targetDate,
             @NotBlank @Size(max = 64) String timezone,
-            @Min(30) @Max(180) int defaultDailyMinutes) {}
+            @Min(20) @Max(180) int defaultDailyMinutes) {}
 
     public record GoalTemplateResponse(
             String id, String key, String displayName, String description) {

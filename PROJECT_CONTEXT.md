@@ -25,12 +25,23 @@ by `knowledge-state-v1`. Learners can inspect localized effective knowledge stat
 mastered concepts receive deterministic `review-interval-v1` schedules. Phase 4 does
 not create a Today plan—those authorities remain in later phases.
 
-**Phase 5 — Learning system P5.0–P5.5 is implemented locally.** A learner with an
-active Java Backend goal can explicitly select a bilingual, versioned 30-minute
+**Phase 5 — Learning system P5.0–P5.5 is implemented and committed (`9c1d410`).**
+A learner with an active Java Backend goal can explicitly select a bilingual, versioned 30-minute
 learn/practice/recall sequence, resume it, and record task transitions. Activity is
 self-reported; it creates no assessment evidence, mastery change, review update, or
 personalized Today plan. Validation and remaining risks are in
 `docs/plans/PHASE_5_LEARNING_SYSTEM.md`.
+
+**Phase 6 — Planner and visual roadmap is completed locally.** Explicit Today
+generation/read/revision and a version-pinned, paged roadmap are implemented.
+The deterministic planner uses four-root curated short variants, one
+`projectionAsOf`, immutable snapshots and superseding revisions. Planner reaches
+Goal, Knowledge, Progress, Review, and Learning only through application contracts.
+The visual map uses dependency-free SVG plus a semantic keyboard-accessible list;
+the same-fixture React Flow/Cytoscape.js spike retained this approach without adding
+a dependency. Automatic evidence-driven replan, time overrides, and goal completion
+remain outside Phase 6. Validation and launch risks are tracked in
+`docs/plans/PHASE_6_PLANNER.md` and `docs/research/PHASE_6_VISUAL_MAP_SPIKE.md`.
 
 ## Confirmed decisions
 
@@ -81,12 +92,13 @@ personalized Today plan. Validation and remaining risks are in
   execution snapshot, receipts, and lifecycle audit. Clean and historical upgrade
   paths are tested on MySQL 8.4.
 - Core domain specifications: defined at v1 design level.
-- Learning task execution: implemented for learner-selected, self-reported study;
-  adaptive planner/evaluation remains at v1 design level.
+- Learning task execution: implemented for learner-selected and planner-assigned,
+  self-reported study; task evaluation remains at v1 design level.
 - Learner-facing visual goal-map/read-model direction: defined for MVP with accessibility and progressive-disclosure constraints.
-- Open-source adoption register, license/provenance workflow, visual-map spike, and post-MVP algorithm evaluation path: defined.
-- API contract: Phase 1 identity/goal, Phase 2 published graph/admin lifecycle, and
-  Phase 3 diagnostic/evidence and Phase 5 Learning endpoints are published in
+- Open-source adoption register, license/provenance workflow, completed Phase 6
+  visual-map spike, and post-MVP algorithm evaluation path: documented.
+- API contract: Phase 1 identity/goal, Phase 2 published graph/admin lifecycle,
+  Phase 3 diagnostic/evidence, Phase 5 Learning, and Phase 6 Today/roadmap endpoints are published in
   `docs/api/openapi-v1.yaml`;
   localized reads document `Accept-Language`/`Content-Language`; frontend TypeScript
   types are generated and checked for drift.
@@ -100,7 +112,7 @@ personalized Today plan. Validation and remaining risks are in
 - Pedagogical review and expansion of the initial project-authored Java Backend graph;
   learning-resource licensing remains a later content decision.
 - Which IT specialization follows Java Backend and the evidence required to prioritize it.
-- Visual graph library selection after a React Flow versus Cytoscape.js spike.
+- Any later graph-library adoption beyond the approved dependency-free Phase 6 renderer.
 - Whether later review data justifies a versioned move from interval policy v1 to FSRS.
 - Hosting provider and production observability stack.
 - Production hosting, observability, backup/restore, immutable image digests, and SBOM automation.
@@ -203,16 +215,42 @@ plan or ADR change.
   Learning activity does not emit assessment evidence or mutate Knowledge State,
   Review, or Progress.
 
-## Next approved work sequence
+## Implemented Phase 6 surface
 
-1. Review and commit the locally implemented Phase 5 slice after final validation.
-2. Discover/design Phase 6 Planner against the published graph, effective knowledge
-   state, review schedule, and immutable Learning catalog; do not treat self-report
-   as evidence or label a manual sequence as a personalized Today plan.
-3. Keep the React Flow versus Cytoscape.js visualization comparison as a bounded later
-   spike; Phase 2 adds no graph-rendering dependency or learner roadmap UI.
-4. Continue Learning Task, Planner, and Adaptive Loop in
-   roadmap order; keep curriculum data generic across IT specializations.
+- Flyway V17–V19 add planner snapshots/decisions/revisions/receipts, permit planner
+  sessions without a curated sequence ID, and seed three independently complete
+  bilingual short variants alongside the existing programming root material.
+- The owner approved `goal-daily-budget-v2`: Flyway V20, Goal validation, OpenAPI,
+  and Goal Setup now accept stored 20–180 minute daily budgets. Existing goals are
+  untouched; Today still takes no client budget override. The 20-minute policy
+  fixture also remains meaningful as remaining time within a longer plan.
+- The planner captures one server-side `projectionAsOf`, pins published graph and
+  dynamic state/review/catalog inputs, and uses deterministic `planner-v1` ranking.
+  A hard unmet prerequisite blocks a dependent task; an oversized variant is never
+  assigned. No client-supplied budget, ranking, or Goal completion command exists.
+- Today is generated only on explicit POST. Same-key replay and current-day
+  uniqueness converge on one result. An explicit revision supersedes immutable
+  history only while every planner task remains unstarted; manual sessions are not
+  replaced. Historical plans remain owner-scoped and readable.
+- The `/today` and `/roadmap` routes support English/Vietnamese UI. The roadmap uses
+  a pinned plan snapshot with a stale badge and pairs dependency-free SVG with an
+  semantic concept list. The planner graph remains bounded to 200 nodes, with
+  stable, owner-scoped roadmap cursor pages and refusal to merge mismatched stamps.
+- Final full backend `clean verify` passed 37 unit/architecture and 30 MySQL
+  integration tests, including clean V1–V20 and historical upgrade paths,
+  50/200-node paging, stale/revision/concurrency, and rollback fixtures. Frontend
+  generation/format/lint, 21 tests, and production build passed. The owner approved
+  dependency-metadata upload to npm registry; `scripts/audit.ps1` reported 0
+  vulnerabilities. The visual-map spike retained the dependency-free renderer.
+
+## Next work sequence
+
+1. Discover/design Phase 7 for evaluated task evidence, evidence-driven replan,
+   missed-day handling, partial-plan preservation, and today's time override.
+2. Before public launch, conduct real-device and assistive-technology roadmap
+   usability checks, pedagogical review of seeded content, privacy retention design,
+   and Flyway/MySQL compatibility review. Do not infer full-curriculum coverage from
+   the four-root content pack.
 
 ## Context maintenance
 

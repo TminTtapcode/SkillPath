@@ -3,7 +3,7 @@
 ## Status and authority
 
 - Status: `REFERENCE`
-- Last verified: 2026-09-22
+- Last verified: 2026-09-23 for the Phase 6 visual-map candidates
 - Scope: implementation acceleration, algorithm research, visual roadmap, assessment,
   review, and AI/tutor patterns.
 
@@ -21,6 +21,10 @@ plan. Their exact versions, declared licenses, purpose, and exit paths are in th
 `DEPENDENCIES.md`; `THIRD_PARTY_NOTICES.md` records that no source or curriculum
 content from the tutor/graph research register has been copied. The visual graph
 libraries remain spike-only and are not present in the npm lockfile.
+
+The Phase 6 same-fixture comparison and dependency-free renderer decision are
+recorded in [PHASE_6_VISUAL_MAP_SPIKE.md](PHASE_6_VISUAL_MAP_SPIKE.md). A later
+library adoption still requires separate owner approval.
 
 ## Adoption strategy
 

@@ -34,6 +34,48 @@ public class JdbcLearningStore implements LearningStore {
     }
 
     @Override
+    public List<PlannerVariant> activeVariants(long graphVersionId) {
+        String sql = """
+                SELECT v.id template_version_id,v.activity_type,v.evaluation_mode,v.estimated_minutes,
+                       v.difficulty,v.variant_group_key,v.title,v.instructions,v.checklist,
+                       r.title resource_title,r.body resource_body,
+                       COALESCE(vt.title,v.title) title_vi,
+                       COALESCE(vt.instructions,v.instructions) instructions_vi,
+                       COALESCE(vt.checklist,v.checklist) checklist_vi,
+                       COALESCE(rt.title,r.title) resource_title_vi,
+                       COALESCE(rt.body,r.body) resource_body_vi,
+                       m.knowledge_node_id primary_node_id
+                FROM task_template_versions v
+                JOIN task_template_knowledge m ON m.task_template_version_id=v.id
+                  AND m.graph_version_id=v.graph_version_id AND m.mapping_role='PRIMARY'
+                JOIN resource_versions r ON r.id=v.resource_version_id AND r.status='ACTIVE'
+                JOIN resources ro ON ro.id=r.resource_id AND ro.source_type='PROJECT_AUTHORED'
+                LEFT JOIN task_template_translations vt ON vt.task_template_version_id=v.id AND vt.locale='vi-VN'
+                LEFT JOIN resource_version_translations rt ON rt.resource_version_id=r.id AND rt.locale='vi-VN'
+                WHERE v.graph_version_id=? AND v.status='ACTIVE'
+                  AND v.activity_type IN ('LEARN','PRACTICE','RECALL')
+                  AND v.evaluation_mode IN ('NONE','SELF_REPORT')
+                  AND (SELECT SUM(k.weight) FROM task_template_knowledge k
+                       WHERE k.task_template_version_id=v.id AND k.graph_version_id=v.graph_version_id)=1.0000
+                  AND EXISTS (SELECT 1 FROM knowledge_resources kr WHERE kr.resource_version_id=r.id
+                              AND kr.graph_version_id=v.graph_version_id
+                              AND kr.knowledge_node_id=m.knowledge_node_id)
+                ORDER BY m.knowledge_node_id,v.id
+                """;
+        return jdbc.query(sql, (rs,row) -> {
+            CatalogTask content = new CatalogTask(rs.getLong("template_version_id"), 0,
+                    rs.getString("activity_type"),rs.getString("evaluation_mode"),
+                    rs.getInt("estimated_minutes"),rs.getLong("primary_node_id"),
+                    new LocalizedText(rs.getString("title"),rs.getString("title_vi")),
+                    new LocalizedText(rs.getString("instructions"),rs.getString("instructions_vi")),
+                    new LocalizedText(rs.getString("resource_title"),rs.getString("resource_title_vi")),
+                    new LocalizedText(rs.getString("resource_body"),rs.getString("resource_body_vi")),
+                    steps(rs.getString("checklist")),steps(rs.getString("checklist_vi")));
+            return new PlannerVariant(content,rs.getInt("difficulty"),rs.getString("variant_group_key"));
+        },graphVersionId);
+    }
+
+    @Override
     public Optional<SequenceDefinition> activeSequence(long graphVersionId, String key) {
         List<Long> ids = jdbc.query("SELECT id FROM learning_sequences WHERE graph_version_id=? AND sequence_key=? AND status='ACTIVE' ORDER BY version_number DESC LIMIT 1",
                 (rs, row) -> rs.getLong(1), graphVersionId, key);
@@ -101,7 +143,7 @@ public class JdbcLearningStore implements LearningStore {
 
     private String sessionSql(String where, boolean lock) {
         return "SELECT s.id,s.user_id,s.goal_id,s.sequence_id,s.graph_version_id,q.sequence_key,s.title_snapshot,s.title_vi_snapshot,s.status,s.assignment_source,s.started_at,s.completed_at,s.version "
-                + "FROM learning_sessions s JOIN learning_sequences q ON q.id=s.sequence_id WHERE " + where
+                + "FROM learning_sessions s LEFT JOIN learning_sequences q ON q.id=s.sequence_id WHERE " + where
                 + (lock ? " FOR UPDATE" : "");
     }
 
@@ -155,6 +197,24 @@ public class JdbcLearningStore implements LearningStore {
             insert("INSERT INTO learning_tasks(session_id,user_id,goal_id,position,task_template_version_id,assignment_source,payload_snapshot,planned_minutes,status,assigned_at) VALUES(?,?,?,?,?,'LEARNER_SELECTED',?,?,'ASSIGNED',?)",
                     sessionId, userId, goalId, task.position(), task.templateVersionId(), encode(task),
                     task.minutes(), Timestamp.from(now));
+        }
+        return sessionId;
+    }
+
+    @Override
+    public long createPlannerSession(long userId,long goalId,long graphVersionId,
+                                     List<PlannerAssignedTask> tasks,Instant now){
+        long sessionId=insert("INSERT INTO learning_sessions(user_id,goal_id,sequence_id,graph_version_id,"
+                        + "title_snapshot,title_vi_snapshot,assignment_source,status,started_at) "
+                        + "VALUES(?,?,NULL,?, ?,?,'PLANNER','ACTIVE',?)",
+                userId,goalId,graphVersionId,"Today's plan","Kế hoạch hôm nay",Timestamp.from(now));
+        for(PlannerAssignedTask item:tasks){
+            CatalogTask task=item.content();
+            insert("INSERT INTO learning_tasks(session_id,user_id,goal_id,position,task_template_version_id,"
+                            + "assignment_source,planner_decision_id,payload_snapshot,planned_minutes,status,assigned_at) "
+                            + "VALUES(?,?,?,?,?,'PLANNER',?,?,?,'ASSIGNED',?)",
+                    sessionId,userId,goalId,task.position(),task.templateVersionId(),item.decisionId(),
+                    encode(task),task.minutes(),Timestamp.from(now));
         }
         return sessionId;
     }

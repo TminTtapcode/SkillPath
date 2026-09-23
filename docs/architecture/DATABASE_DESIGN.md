@@ -35,7 +35,10 @@ Phase 1 physically implements `users`, `user_credentials`, `user_roles`,
 `outbox_events` reliability envelope. V10/V11 add Vietnamese presentation overlays for
 the canonical goal template, 17 knowledge nodes, and eight question versions. V12/V13
 physically add Progress/Review and outbox leasing. V14–V16 physically add the Learning
-catalog, bilingual seed, and execution ledger. Planner tables remain logical design.
+catalog, bilingual seed, and execution ledger. V17–V19 implement Planner tables,
+planner-owned sessions, and short bilingual task variants. V20 widens the
+`user_goals.default_daily_minutes` CHECK from 30–180 to 20–180 without rewriting V2
+or existing Goal rows.
 
 Flyway history at the Phase 1 boundary:
 
@@ -57,6 +60,8 @@ Flyway history at the Phase 1 boundary:
 | V14 | Versioned resource/task/sequence catalog and Vietnamese presentation overlays |
 | V15 | Project-authored Java Backend 30-minute learn/practice/recall sequence |
 | V16 | Learner-owned pinned sessions/tasks, generated active-goal uniqueness, lifecycle audit, and idempotency receipts |
+| V17–V19 | Planner snapshots/decisions/plans, planner-assigned Learning sessions, and four-root short content coverage |
+| V20 | Replace the Goal daily-budget CHECK with 20–180 (`goal-daily-budget-v2`) |
 
 V4 and V5 intentionally demonstrate the forward-fix rule: an applied migration was
 not rewritten after integration validation exposed a mismatch/context conflict.
@@ -120,6 +125,16 @@ planner decision IDs constrained by assignment source. Owner-scoped command rece
 optimistic task versions, and append-only task events protect duplicate/concurrent
 transitions. These are engagement records only: no FK or write path grants Learning
 authority over Assessment evidence, Progress, Review, or Planner decisions.
+
+Phase 6 adds V17–V19. `planning_snapshots` stores the one `projection_as_of`, graph
+version, policy version, input hash/payload and progress/review digests. Decisions
+and candidate breakdowns are append-only. `daily_plans` enforces one current
+revision per user/goal/local day and records the superseded plan ID; only its
+current/superseded lifecycle marker changes. Ordered items link decisions to
+Learning task assignments. Planner command receipts enforce replay. V18 permits a
+null sequence only for planner-assigned sessions and links their tasks to decisions;
+V19 supplies project-authored bilingual short variants for the graph roots.
+Existing learner-selected sessions and V1–V16 migrations remain unchanged.
 
 Localization tables are owned beside their canonical sources. Their composite keys bind
 one allowlisted locale to one immutable source version. English remains in the source

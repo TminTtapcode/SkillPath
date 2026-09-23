@@ -81,6 +81,11 @@ PATCH /me/preferences
 
 ### Goals
 
+`POST /goals` accepts an integer stored `defaultDailyMinutes` from 20 through 180
+(`goal-daily-budget-v2`). A Goal budget is not a Today override. Values outside the
+range are rejected at the transport boundary and by Goal/domain and database
+constraints; existing Goal IDs and budgets remain unchanged.
+
 ```http
 GET  /goal-templates
 GET  /goal-templates/{goalTemplateId}/graph
@@ -151,13 +156,29 @@ mastery, user ID, assignment source, or planner decision. The content snapshot i
 both languages; locale affects only presentation, never command hashes or task history.
 Self-report records engagement only and cannot change Knowledge State or Review.
 
-The following target routes are reserved for Phase 6/7, not implemented by this
-learner-selected sequence:
+Phase 6 adds explicit, authenticated Today and roadmap routes:
 
 ```http
 GET  /learning/today
-PUT  /learning/today/available-minutes
+POST /learning/today/generate
+POST /learning/today/revise
+GET  /learning/today/plans/{id}
+GET  /roadmap
 ```
+
+The two POST commands have an empty body and require CSRF plus `Idempotency-Key`.
+The server derives the learning day and budget from the owned goal; the client cannot
+set priority, decision, assignment, or mastery. `GET /learning/today` never generates
+work. `generate` returns the existing current plan for the day if present. `revise`
+creates a new immutable revision only if all previous planner tasks remain `ASSIGNED`.
+A learner-selected active session blocks planner assignment. Historical revisions
+remain available through the owner-scoped plan read; cross-owner IDs are concealed.
+No-plan responses carry `reasonCode`: `NO_CONTENT` when no active compatible task
+candidate exists, `NO_ELIGIBLE_VARIANT` when candidates are blocked or unsafe, or
+`NO_TIME_FIT_VARIANT` when available content exceeds the stored budget. A goal
+completion candidate is not a completed Goal.
+The UI treats diagnostic evidence, knowledge estimates, and planner reasons as
+different authorities. Phase 7 retains time overrides and automatic replanning.
 
 ### Progress
 
@@ -174,11 +195,15 @@ mastery from time-decayed effective mastery, carry `knowledge-state-v1`, and exp
 append-only evidence provenance without raw answers. The due-review read does not
 assign a learning task or advance an interval.
 
-The roadmap response is a read-only, version-stamped projection containing a bounded
-set of nodes/edges, mutually exclusive `knowledgeStatus`, separate planner overlays
-(`current`, `ready`, `blocked`), blocked prerequisite IDs/reasons, current plan items,
-and expansion cursors/links where needed. It must include graph version,
-progress/review snapshot versions, planner revision, and `projectionAsOf`. It cannot
+The Phase 6 roadmap response is a read-only, bounded graph projection with mutually
+exclusive `knowledgeStatus`, separate `current`/`ready`/`blockedBy` overlays,
+graph version, progress/review digests, plan revision, and one `projectionAsOf`.
+When a Today plan exists, overlays are derived from its pinned snapshot, with a stale
+badge if current state differs. The read accepts `limit` 1–100 (default 50) and an
+opaque `cursor`; `hasMore`/`nextCursor` page nodes in stable graph order. Edges whose
+target is on the page accompany that page. The cursor binds the owner, goal, graph,
+plan revision, `projectionAsOf`, and progress/review digests; a changed snapshot
+returns `409 ROADMAP_CURSOR_STALE`, and malformed cursors return `400`. The roadmap cannot
 accept mastery, prerequisite-waiver, or goal-completion mutations.
 
 ### Admin/curator

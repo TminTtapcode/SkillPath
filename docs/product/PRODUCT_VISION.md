@@ -20,7 +20,7 @@ SkillPath turns a large goal into the shortest defensible learning route and sho
 
 ## Initial target user
 
-A student or junior developer who wants to become ready for a Java Backend Internship, has uneven Java/Spring/SQL/Web knowledge, can study 30–180 minutes per day, and needs guidance on what to do next.
+A student or junior developer who wants to become ready for a Java Backend Internship, has uneven Java/Spring/SQL/Web knowledge, can study 20–180 minutes per day, and needs guidance on what to do next.
 
 Java Backend is the first curated track used to validate the adaptive engine. The
 long-term product may support other IT specializations such as frontend, mobile,

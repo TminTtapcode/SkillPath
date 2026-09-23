@@ -56,11 +56,19 @@ Phase 5 adds a learner-selected study-session execution path, not the adaptive l
 Its start/complete/skip/blocked/resume/abandon commands commit a task transition and
 append-only lifecycle audit in one transaction with an idempotency receipt. It does
 **not** create an unhandled outbox event: the Phase 4 dispatcher would otherwise
-exhaust retries on an unknown event type. Phase 6/7 must register a versioned consumer
-and add the durable event handoff when planner/evaluation orchestration exists.
+exhaust retries on an unknown event type. Phase 6 creates plans only through explicit
+commands and does not add automatic replanning. Phase 7 must register a versioned
+consumer and add the durable event handoff when planner/evaluation orchestration exists.
 Self-reported activity never updates Progress or Review.
 
 ## 4. Plan revision rules
+
+Phase 6 permits an explicit revision only when every task in the existing planner
+plan remains `ASSIGNED`. The new snapshot and revision are immutable records linked
+to the superseded revision; only the current/superseded marker changes atomically.
+All dynamic inputs and roadmap overlays for a revision use its single server-captured
+`projectionAsOf`. Evidence-triggered, partial-plan, missed-day, and time-override
+replanning below is Phase 7 work.
 
 - Preserve completed tasks.
 - Do not silently delete in-progress tasks.
@@ -78,7 +86,7 @@ Self-reported activity never updates Progress or Review.
 | Invalid AI output | Reject evidence; audit; never update state |
 | State optimistic-lock conflict | Retry bounded times, then queue/rebuild |
 | No eligible task | Run documented fallback; never let AI bypass prerequisite |
-| No time-fit task | Offer micro-assessment or ask for more time |
+| No time-fit task | Phase 6 returns `NO_SAFE_RECOMMENDATION`/`NO_TIME_FIT_VARIANT` and asks for more time; a later approved micro-assessment may be offered only with real content/evaluation |
 | Replan fails after completion | Completion remains committed; retry replan idempotently |
 | Curriculum version retired | Existing history remains; controlled migration required |
 

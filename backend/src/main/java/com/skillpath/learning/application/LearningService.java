@@ -56,6 +56,81 @@ public class LearningService implements LearningQueries {
         return store.activeSession(userId, goalId).map(s -> store.tasks(userId, s.id())).orElse(List.of());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<LearningQueries.PlannerVariant> activeVariants(long graphVersionId) {
+        return store.activeVariants(graphVersionId).stream().map(variant ->
+                new LearningQueries.PlannerVariant(variant.content().templateVersionId(),
+                        variant.content().primaryNodeId(), variant.content().activityType(),
+                        variant.difficulty(), variant.content().minutes())).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LearningQueries.AssignedSession activeAssignment(long userId, long goalId) {
+        return store.activeSession(userId, goalId).map(session ->
+                new LearningQueries.AssignedSession(session.id(), session.assignmentSource()))
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LearningQueries.AssignedTask> sessionTasks(long userId, long sessionId) {
+        if(store.session(userId,sessionId,false).isEmpty()) return List.of();
+        return store.tasks(userId,sessionId).stream().map(task -> new LearningQueries.AssignedTask(
+                task.id(), task.position(), task.status(), task.plannedMinutes(),
+                task.title().en(), task.title().vi())).toList();
+    }
+
+    @Override
+    @Transactional
+    public long assignPlanner(long userId,long goalId,long graphVersionId,
+                              List<LearningQueries.PlannerSelection> selections,Instant now){
+        if(selections.isEmpty() || selections.size()>3 || store.activeSession(userId,goalId).isPresent())
+            throw new ApiException(HttpStatus.CONFLICT,"ACTIVE_LEARNING_SESSION",
+                    "A learning session is already active or the plan is invalid.");
+        var available=store.activeVariants(graphVersionId).stream()
+                .collect(java.util.stream.Collectors.toMap(v->v.content().templateVersionId(),v->v));
+        List<LearningStore.PlannerAssignedTask> tasks=new ArrayList<>();
+        Set<Long> seen=new HashSet<>();
+        for(int i=0;i<selections.size();i++){
+            var selection=selections.get(i);
+            var variant=available.get(selection.templateVersionId());
+            if(selection.decisionId()<1 || selection.position()!=i+1 || variant==null
+                    || !seen.add(selection.templateVersionId()))
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,"INVALID_PLANNER_ASSIGNMENT",
+                        "Planner task selection is invalid.");
+            var content=variant.content();
+            tasks.add(new LearningStore.PlannerAssignedTask(selection.decisionId(),new CatalogTask(
+                    content.templateVersionId(),selection.position(),content.activityType(),
+                    content.evaluationMode(),content.minutes(),content.primaryNodeId(),
+                    content.title(),content.instructions(),content.resourceTitle(),content.resourceBody(),
+                    content.checklistEn(),content.checklistVi())));
+        }
+        return store.createPlannerSession(userId,goalId,graphVersionId,tasks,now);
+    }
+
+    @Override
+    @Transactional
+    public void supersedeUnstarted(long userId,long sessionId,Instant now){
+        SessionRow session=store.session(userId,sessionId,true)
+                .orElseThrow(()->notFound("LEARNING_SESSION_NOT_FOUND"));
+        List<TaskRow> tasks=store.tasks(userId,sessionId);
+        if(!session.status().equals("ACTIVE") || !session.assignmentSource().equals("PLANNER")
+                || tasks.isEmpty() || tasks.stream().anyMatch(task->!task.status().equals("ASSIGNED")))
+            throw new ApiException(HttpStatus.CONFLICT,"PLANNER_REVISION_BLOCKED",
+                    "Only wholly unstarted planner sessions may be revised.");
+        for(TaskRow task:tasks){
+            long receipt=store.addReceipt(userId,"planner-revision-"+sessionId+"-"+task.id(),
+                    "planner-revision",Long.toString(sessionId),task.id(),"EXPIRED",now);
+            if(!store.transitionTask(task.id(),task.version(),"EXPIRED",null,now))
+                throw new ApiException(HttpStatus.CONFLICT,"PLANNER_REVISION_BLOCKED",
+                        "The planner session changed.");
+            store.addEvent(task.id(),userId,receipt,"ASSIGNED","EXPIRED","OTHER",now);
+        }
+        store.closeSession(sessionId,"STOPPED",now);
+    }
+
     @Transactional(readOnly = true)
     public List<SequenceView> sequences(long userId, SupportedLocale locale) {
         var goal = goals.activeGoalForUser(userId);
@@ -88,6 +163,9 @@ public class LearningService implements LearningQueries {
         var graph = knowledge.publishedLearningGraph(goal.goalTemplateId());
         SequenceDefinition sequence = compatible(graph.graphVersionId(), graph.rootNodeIds(), key);
         SessionRow active = store.activeSession(userId, goal.id()).orElse(null);
+        if(active!=null && active.assignmentSource().equals("PLANNER"))
+            throw new ApiException(HttpStatus.CONFLICT,"ACTIVE_PLANNER_SESSION",
+                    "Finish or stop the current Today plan first.");
         long id;
         boolean created;
         if (active != null) {

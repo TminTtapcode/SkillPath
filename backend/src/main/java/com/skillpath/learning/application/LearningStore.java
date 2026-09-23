@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public interface LearningStore {
     List<SequenceDefinition> activeSequences(long graphVersionId);
+    List<PlannerVariant> activeVariants(long graphVersionId);
     Optional<SequenceDefinition> activeSequence(long graphVersionId, String key);
     Optional<SessionRow> activeSession(long userId, long goalId);
     Optional<SessionRow> session(long userId, long sessionId, boolean lock);
@@ -13,6 +14,8 @@ public interface LearningStore {
     List<TaskRow> tasks(long userId, long sessionId);
     Optional<TaskRow> task(long userId, long taskId, boolean lock);
     long createSession(long userId, long goalId, SequenceDefinition sequence, Instant now);
+    long createPlannerSession(long userId, long goalId, long graphVersionId,
+                             List<PlannerAssignedTask> tasks, Instant now);
     boolean transitionTask(long taskId, long version, String status, Integer actualMinutes, Instant now);
     void closeSession(long sessionId, String status, Instant now);
     void addEvent(long taskId, long userId, long commandId, String from, String to, String reason, Instant now);
@@ -27,6 +30,8 @@ public interface LearningStore {
                        int minutes, long primaryNodeId, LocalizedText title, LocalizedText instructions,
                        LocalizedText resourceTitle, LocalizedText resourceBody,
                        List<Step> checklistEn, List<Step> checklistVi) {}
+    record PlannerVariant(CatalogTask content, int difficulty, String variantGroupKey) {}
+    record PlannerAssignedTask(long decisionId, CatalogTask content) {}
     record SequenceDefinition(long id, String key, int version, long graphVersionId,
                               LocalizedText title, LocalizedText description, List<CatalogTask> tasks) {
         public int totalMinutes() { return tasks.stream().mapToInt(CatalogTask::minutes).sum(); }

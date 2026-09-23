@@ -88,6 +88,11 @@ Exit: user can execute a bounded learn/practice/recall sequence.
 
 ## Phase 6 — Planner
 
+Status: `DONE` for the owner-approved Phase 6 slice on 2026-09-23; validation is
+recorded in `PHASE_6_PLANNER.md`. The [visual-map spike](../research/PHASE_6_VISUAL_MAP_SPIKE.md)
+supports retaining dependency-free SVG plus a semantic list for the current bound.
+A graph-rendering dependency still needs separate approval.
+
 - Candidate generation, prerequisite gate, signals, scoring, tie-breaks.
 - Decisions, explanations, alternatives, plan revisions.
 - Learner roadmap projection combining graph, progress, review, and active plan versions.

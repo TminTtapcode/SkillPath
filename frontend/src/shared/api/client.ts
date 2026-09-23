@@ -22,6 +22,8 @@ export type LearningSession = components['schemas']['LearningSessionResponse']
 export type LearningTask = components['schemas']['LearningTaskResponse']
 export type LearningStart = components['schemas']['LearningStartResponse']
 export type LearningCommand = components['schemas']['LearningCommandResponse']
+export type TodayPlan = components['schemas']['TodayPlanResponse']
+export type Roadmap = components['schemas']['RoadmapResponse']
 export interface KnowledgeState {
   knowledgeNodeId: string
   knowledgeNodeSlug: string
@@ -137,6 +139,27 @@ export const listGoalTemplates = () =>
   request<GoalTemplate[]>('/api/v1/goal-templates')
 
 export const getActiveGoal = () => request<Goal>('/api/v1/goals/active')
+
+export const getTodayPlan = () => request<TodayPlan>('/api/v1/learning/today')
+
+export const generateTodayPlan = (key: string) =>
+  request<TodayPlan>('/api/v1/learning/today/generate', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': key },
+  })
+
+export const reviseTodayPlan = (key: string) =>
+  request<TodayPlan>('/api/v1/learning/today/revise', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': key },
+  })
+
+export const getRoadmap = (cursor?: string) =>
+  request<Roadmap>(
+    cursor
+      ? `/api/v1/roadmap?cursor=${encodeURIComponent(cursor)}`
+      : '/api/v1/roadmap',
+  )
 
 export const createGoal = (input: CreateGoalInput, idempotencyKey: string) =>
   request<Goal>('/api/v1/goals', {

@@ -28,7 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentKnowledgeQueries, LearningKnowledgeQueries {
+public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentKnowledgeQueries,
+        LearningKnowledgeQueries, PlannerKnowledgeQueries {
 
     private static final int MAX_LIMIT = 200;
     private static final int MAX_DEPTH = 10;
@@ -42,6 +43,40 @@ public class KnowledgeGraphService implements KnowledgeGraphQueries, AssessmentK
     public KnowledgeGraphService(KnowledgeGraphStore store, Clock clock) {
         this.store = store;
         this.clock = clock;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PlanningGraph planningGraph(long goalTemplateId) {
+        GraphSnapshot graph = store.findPublishedByGoalTemplate(goalTemplateId)
+                .orElseThrow(() -> notFound("PUBLISHED_GOAL_GRAPH_NOT_FOUND", "Published goal graph was not found."));
+        if (graph.nodes().size() > MAX_LIMIT) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "PLANNING_GRAPH_TOO_LARGE",
+                    "This graph exceeds the bounded planner snapshot.");
+        }
+        Map<Long, GoalKnowledge> members = new HashMap<>();
+        graph.goalKnowledge().stream().filter(mapping -> mapping.goalTemplateId() == goalTemplateId)
+                .forEach(mapping -> members.put(mapping.knowledgeNodeId(), mapping));
+        Map<Long, KnowledgeGraphStore.NodeTranslation> vi =
+                store.findNodeTranslations(graph.version().id(), "vi-VN");
+        List<KnowledgeNode> ordered = GraphAlgorithms.topologicalOrder(graph);
+        List<PlannerKnowledgeQueries.Node> nodes = new ArrayList<>();
+        for (int index = 0; index < ordered.size(); index++) {
+            KnowledgeNode node = ordered.get(index);
+            GoalKnowledge mapping = members.get(node.id());
+            if (mapping == null) continue;
+            var translated = vi.get(node.id());
+            nodes.add(new PlannerKnowledgeQueries.Node(node.id(), node.slug(), node.name(),
+                    translated == null ? node.name() : translated.name(), node.status().name(),
+                    mapping.relevanceWeight(), mapping.requiredMastery(), mapping.terminal(), index));
+        }
+        Set<Long> ids = nodes.stream().map(PlannerKnowledgeQueries.Node::id)
+                .collect(java.util.stream.Collectors.toSet());
+        List<PlannerKnowledgeQueries.Edge> edges = graph.relations().stream()
+                .filter(edge -> ids.contains(edge.sourceNodeId()) && ids.contains(edge.targetNodeId()))
+                .map(edge -> new PlannerKnowledgeQueries.Edge(edge.sourceNodeId(), edge.targetNodeId(),
+                        edge.type().name(), edge.strength())).toList();
+        return new PlanningGraph(graph.version().id(), nodes, edges);
     }
 
     @Transactional(readOnly = true)

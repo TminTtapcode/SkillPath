@@ -37,7 +37,9 @@ flowchart TD
     PR --> OB
     OB --> RV[review]
     PL[planner] --> K
+    PL --> GOAL
     PL --> PR
+    PL --> RV
     PL --> L[learning contract]
     L --> GOAL
     L --> K
@@ -64,7 +66,13 @@ Cycles in code dependencies are forbidden. A workflow spanning modules belongs i
   knowledge` without a reverse runtime dependency; the knowledge-owned mapping uses a
   database FK only for goal-template existence.
 - `review` alone advances review intervals. `progress` may expose `nextReviewAt` only as a derived snapshot received through the review contract.
-- Phase 5 `learning` reads the owned active goal through `GoalQueries` and root-node compatibility through `LearningKnowledgeQueries`; it never imports goal/knowledge persistence. The learner explicitly starts a catalog sequence. `LearningQueries` exposes immutable catalog/assignment views for the future Planner, but Learning does not rank or publish a Today plan.
+- Phase 5 `learning` reads the owned active goal through `GoalQueries` and root-node compatibility through `LearningKnowledgeQueries`; it never imports goal/knowledge persistence. The learner explicitly starts a catalog sequence. In Phase 6, `LearningQueries` also exposes narrow immutable planner catalog/session/task views and validated assignment/supersession commands; Learning never ranks or publishes a Today plan.
+- The Phase 6 Planner reads or commands Goal, Knowledge, Progress,
+  Review, and Learning **only through their public application contracts**. It
+  never imports or queries another module's repository, entity, persistence adapter,
+  or controller, including through a cross-module SQL join. Its captured
+  `projectionAsOf` is passed to every dynamic snapshot contract; revisions append
+  immutable snapshots/decisions and supersede earlier revisions atomically.
 - Learning task completion in Phase 5 records engagement and audit only. The dotted Assessment dependency above is a later evaluated-task contract, not a Phase 5 runtime call.
 - Cross-module database joins are avoided in domain writes; dedicated read models may join through controlled query adapters.
 - Events are past tense facts, versioned, and idempotently consumed.
