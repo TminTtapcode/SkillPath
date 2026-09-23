@@ -31,7 +31,7 @@ export function GoalSwitcher({ currentGoalId, allGoals }: { currentGoalId: strin
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
       >
-        {t('goal.switchTrack', 'Switch Goal Track')}
+        {t('goal.switchTrack')}
       </button>
 
       {isOpen && (
@@ -40,7 +40,7 @@ export function GoalSwitcher({ currentGoalId, allGoals }: { currentGoalId: strin
           background: 'var(--panel-bg)', border: '1px solid var(--border-color)',
           padding: '1rem', borderRadius: '8px', zIndex: 100, minWidth: '250px'
         }}>
-          <h4>{t('goal.yourTracks', 'Your Tracks')}</h4>
+          <h4>{t('goal.yourTracks')}</h4>
           <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0' }}>
             {allGoals.map(goal => (
               <li key={goal.id} style={{ marginBottom: '0.5rem' }}>
@@ -55,7 +55,7 @@ export function GoalSwitcher({ currentGoalId, allGoals }: { currentGoalId: strin
             ))}
           </ul>
           <Link to="/goals/new" className="button" style={{ display: 'block', textAlign: 'center' }}>
-            {t('goal.startNew', 'Start New Track')}
+            {t('goal.startNew')}
           </Link>
         </div>
       )}

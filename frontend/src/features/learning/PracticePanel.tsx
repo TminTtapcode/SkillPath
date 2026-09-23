@@ -10,24 +10,24 @@ export function PracticePanel({ taskTemplateVersionId }: { taskTemplateVersionId
     queryFn: () => getTaskPractices(taskTemplateVersionId),
   })
 
-  if (practicesQuery.isPending) return <Loading label={t('common.loading', 'Loading practices...')} />
+  if (practicesQuery.isPending) return <Loading label={t('common.loading')} />
   if (practicesQuery.error) return <ErrorNotice error={practicesQuery.error} />
 
   const practices = practicesQuery.data ?? []
 
   if (practices.length === 0) {
-    return <p>{t('learning.noPractices', 'No practice exercises for this task.')}</p>
+    return <p>{t('learning.noPractices')}</p>
   }
 
   return (
     <div className="practice-panel">
       {practices.map((practice, index) => (
         <div key={practice.id} className="practice-exercise" style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-          <h4>{t('learning.practiceExercise', 'Practice')} {index + 1}</h4>
+          <h4>{t('learning.practiceExercise')} {index + 1}</h4>
           <p>{practice.prompt}</p>
           {practice.starterCode && (
             <div className="starter-code" style={{ marginTop: '1rem' }}>
-              <strong>{t('learning.starterCode', 'Starter Code:')}</strong>
+              <strong>{t('learning.starterCode')}:</strong>
               <pre style={{ background: 'var(--panel-bg)', padding: '1rem', borderRadius: '4px' }}>
                 <code>{practice.starterCode}</code>
               </pre>
@@ -35,7 +35,7 @@ export function PracticePanel({ taskTemplateVersionId }: { taskTemplateVersionId
           )}
           {practice.expectedOutput && (
             <div className="expected-output" style={{ marginTop: '1rem' }}>
-              <strong>{t('learning.expectedOutput', 'Expected Output:')}</strong>
+              <strong>{t('learning.expectedOutput')}:</strong>
               <pre style={{ background: 'var(--panel-bg)', padding: '1rem', borderRadius: '4px' }}>
                 <code>{practice.expectedOutput}</code>
               </pre>
